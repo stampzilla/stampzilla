@@ -1,0 +1,48 @@
+.TH stampzilla "1" "2011 Jonathan S-K" "stampzilla homeautomation" "User Commands"
+.SH NAME
+stampzilla \- Command line interface for the stampzilla homeautomation network
+.SH SYNOPSIS
+.B stampzilla
+\fICOMMAND\fR \fR[\fIFILE\fR] \fR[\fIFLAGS\fR]
+.SH DESCRIPTION
+.PP
+The stampzilla command is used for starting, stopping and configuring daemons in the stampzilla network
+.SH COMMANDS
+.PP
+There are a whole bunch of commands available
+.TP
+\fBhelp\fR
+display this help and exit
+.TP
+\fBlist\fR
+lists all running processes
+.TP
+\fBsimplelist\fR
+lists all running processes, only the process name
+.TP
+\fBdebug\fR
+connects to the nohup.out and shows all traffic
+.BR
+.TP
+\fBstart \fR[\fIprocess name\fR]
+start a new process as a daemon
+.TP
+\fBstop \fR[\fIprocess name\fR]
+stop the selected process
+.TP
+\fBadd \fR[\fIprocess name\fR] [\fIargs\fR]
+add the selected process to the start list
+.TP
+\fBremove \fR[\fIprocess name\fR] [\fIargs\fR]
+removes the selected process to the start list
+.TP
+\fBshow\fR
+show the start list
+.BR
+.TP
+\fBstart\fR
+start all processes in the start list
+.TP
+\fBstop\fR
+stop all php processes
+
