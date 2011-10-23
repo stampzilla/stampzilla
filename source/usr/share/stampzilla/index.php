@@ -162,7 +162,7 @@
 
             <div class="bg"></div>
             <div class="status">
-                <div id="temp"><?php $data = json_decode(file_get_contents('net1.json')); echo $data->Totalt->total; ?></div>
+                <div id="temp"></div>
                 <div id="time" onClick="location.reload();"></div>
                 <div id="date"></div>
                 <div id="larm"></div>
