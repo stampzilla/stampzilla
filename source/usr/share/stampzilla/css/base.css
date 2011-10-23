@@ -4,7 +4,7 @@ html, body {
 }
 
 body {
-    background: url(images/old_paper.jpg) #000;
+    background: url(../images/old_paper.jpg) #000;
     -webkit-background-size: 2000px 1333px;
     color:#fff;
     font-family:sans-serif;
@@ -175,7 +175,7 @@ h1 {
 }
 
 .toggle {
-    background:url(images/toggle.png) 0px 0px no-repeat;
+    background:url(../images/toggle.png) 0px 0px no-repeat;
     height:27px;
     padding-left:95px;
     margin-bottom:10px;
@@ -186,11 +186,11 @@ h1 {
 
 }
 .toggle.true {
-    background:url(images/toggle.png) 0px -30px no-repeat;
+    background:url(../images/toggle.png) 0px -30px no-repeat;
 }
 
 .radio {
-    background:url(images/action.png) 0px -30px no-repeat;
+    background:url(../images/action.png) 0px -30px no-repeat;
     height:27px;
     padding-left:95px;
     margin-bottom:10px;
@@ -201,5 +201,5 @@ h1 {
 
 }
 .radio.true {
-    background:url(images/action.png) 0px 0px no-repeat;
+    background:url(../images/action.png) 0px 0px no-repeat;
 }
