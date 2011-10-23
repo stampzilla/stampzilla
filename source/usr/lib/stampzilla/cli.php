@@ -3,11 +3,11 @@
 
 define("VERSION",'0.0.4');
 
-require "functions.php";
+require "lib/functions.php";
 
 $args = arguments($_SERVER['argv']);
 $pwd = getcwd();
-chdir('/usr/lib/stampzilla/');
+chdir('/usr/lib/stampzilla/components/');
 
 if ( isset($_SERVER["argv"][1]) ) {
     command($args['arguments'],$pwd);

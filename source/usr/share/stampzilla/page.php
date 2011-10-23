@@ -21,6 +21,9 @@ if( $_GET['m'] == 'rooms' ) { ?>
 <div class="toggle" onclick="toggle(this,'to=plc&cmd=set&unit=Yoda|Roof&value=32767','to=plc&cmd=reset&unit=Yoda|Roof');">Roof</div>
 <div class="toggle" onclick="toggle(this,'to=yamaha&cmd=Zone2Power|1','to=yamaha&cmd=Zone2Power|0');">Zone 2</div>
 
+<?php } else if( $_GET['m'] == 'alarm' && $_GET['s'] == 'log' ) { ?>
+<iframe src="logger.php">
+</iframe>
 <?php } else { ?>
 
 yeey

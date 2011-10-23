@@ -203,3 +203,10 @@ h1 {
 .radio.true {
     background:url(../images/action.png) 0px 0px no-repeat;
 }
+
+iframe {
+    background: #FFFFFF;
+    border: 0 none;
+    height: 100%;
+    width: 100%;
+}
