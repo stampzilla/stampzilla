@@ -1,0 +1,17 @@
+.iPad .menu a, .iPad .menu a.last {
+    width:auto;
+    padding-left:10px;
+    padding-right:10px;
+}
+
+.iPad .container {
+    width:768px;
+    height:1004px;
+    margin:none;
+}
+
+.iPhone .container, .iPhone {
+    height: 460px;
+    width: 320px;
+    margin:none;
+}

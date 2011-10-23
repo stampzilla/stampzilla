@@ -1,0 +1,205 @@
+html, body {
+    margin:0;
+    padding:0;
+}
+
+body {
+    background: url(images/old_paper.jpg) #000;
+    -webkit-background-size: 2000px 1333px;
+    color:#fff;
+    font-family:sans-serif;
+    margin:0px;
+}
+
+.container {
+    width:1024px;
+    height:600px;
+    margin:auto;
+    position:relative;
+}
+
+.bg {
+    position:absolute;
+    top:0px;
+    left:0px;
+    height:100%;
+    width:100%;
+    background:#000;
+    opacity:0.4;
+}
+
+.iPad .bg {
+    display:none;
+}
+
+.status {
+    position:absolute;
+    top:0px;
+    left:0px;
+    height:100px;
+    width:100%;
+    background:#000;
+    border-bottom:2px solid #fff;
+}
+
+.status #larm {
+    position:absolute;
+    bottom:0px;
+    padding:10px;
+    background: #500;
+    width:1004px;
+    display:none;
+    height:1em;
+}
+
+.status #time {
+    position:absolute;
+    top:0px;
+    padding:10px;
+    right:0px;
+    font-size:40px;
+}
+
+.status #time span {
+    font-size:20px;
+    margin-left:5px;
+    padding-top:5px;
+    display:inline-block;
+    vertical-align:top;
+}
+
+.status #temp {
+    position:absolute;
+    top:0px;
+    padding:10px;
+    left:0px;
+    font-size:40px;
+}
+
+.status #date {
+    position:absolute;
+    bottom:0px;
+    padding:10px;
+    right:0px;
+}
+
+.iPhone .status {
+    display:none;
+}
+
+.menu {
+    position:absolute;
+    bottom:0px;
+    left:0px;
+    height:60px;
+    width:100%;
+    border-top:2px solid #fff;
+    z-index:100;
+    background:#000;
+}
+.menu a {
+    display:block;
+    float:left;
+    padding-top:17px;
+    height:42px;
+    margin-right:10px;
+    width:162px;
+    text-align:center;
+    background:#000;
+    color:#fff;
+    text-decoration:none;
+    font-size:20px;
+}
+
+.menu a.active {
+    background:#fff;
+    color:#000;
+    font-weight:bold;
+}
+
+.menu a.last {
+    margin-right:0px;
+    width:164px;
+}
+#submenu {
+    position:absolute;
+    right:0px;
+    bottom:62px;
+    left:0px;
+    overflow:auto;
+    height:40px;
+    z-index:100;
+    background:#fff;
+    visibility:hidden;
+    opacity: 0;
+    z-index:10;
+}
+
+#submenu a {
+    display:block;
+    float:left;
+    padding-top:8px;
+    height:32px;
+    margin-right:10px;
+    width:162px;
+    text-align:center;
+    color:#000;
+    text-decoration:none;
+    font-size:20px;
+}
+
+#submenu a.active {
+    font-weight:bold;
+}
+
+.main {
+    position:absolute;
+    top:102px;
+    right:0px;
+    bottom:62px;
+    left:0px;
+    overflow:auto;
+    padding:10px;
+}
+
+.iPhone .main {
+    top:0px;
+}
+
+.iPhone .menu {
+    display:none;
+}
+
+h1 {
+    margin-top:0px;
+}
+
+.toggle {
+    background:url(images/toggle.png) 0px 0px no-repeat;
+    height:27px;
+    padding-left:95px;
+    margin-bottom:10px;
+    font-size:20px;
+    padding-top:3px;
+    width:0px;
+    white-space:nowrap;
+
+}
+.toggle.true {
+    background:url(images/toggle.png) 0px -30px no-repeat;
+}
+
+.radio {
+    background:url(images/action.png) 0px -30px no-repeat;
+    height:27px;
+    padding-left:95px;
+    margin-bottom:10px;
+    font-size:20px;
+    padding-top:3px;
+    width:0px;
+    white-space:nowrap;
+
+}
+.radio.true {
+    background:url(images/action.png) 0px 0px no-repeat;
+}

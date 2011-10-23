@@ -1,0 +1,11 @@
+.iPad .container {
+    width:1024px;
+    height:748px;
+    margin:none;
+}
+
+.iPhone .container {
+    height: 320px;
+    width: 460px;
+    margin:none;
+}
