@@ -1,0 +1,10 @@
+#!/bin/bash
+ln -sf `pwd`/source/usr/bin/stampzilla /usr/bin/stampzilla
+ln -sf `pwd`/source/usr/share/stampzilla /usr/share/stampzilla
+ln -sf `pwd`/source/usr/lib/stampzilla /usr/lib/stampzilla
+ln -sf `pwd`/source/usr/share/man/man1/stampzilla.1.gz /usr/share/man/man1/stampzilla.1.gz
+ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
+
+update-rc.d stampzilla defaults
+
+aptitude install php5-cli
