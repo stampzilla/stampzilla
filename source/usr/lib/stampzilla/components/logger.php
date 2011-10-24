@@ -36,15 +36,15 @@ class logger {
 
 	function textFormat($pkt) {
 		switch($pkt['level']) {
-			case logLevel::critical:
+			case critical:
         		return "\033[31mCRITICAL ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";
-			case logLevel::error:
+			case error:
         		return "\033[31mERROR    ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";
-			case logLevel::warning:
+			case warning:
         		return "\033[31mWARNING  ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";
-			case logLevel::notice:
+			case notice:
         		return "\033[31mNOTICE   ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";
-			case logLevel::debug:
+			case debug:
         		return "\033[31mDEBUG    ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";
 			default:
         		return "\033[31mUNKNOWN  ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."\n\033[0m";

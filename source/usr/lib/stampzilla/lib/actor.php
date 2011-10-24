@@ -10,7 +10,7 @@ class actor {
         $this->peer = '';
 
         define('actor',get_class($this));
-        trigger_error("----- Starting up new actor named ".get_class($this)." -----");
+        note(debug,"----- Starting up new actor named ".get_class($this)." -----");
     }
 
     function broadcast( $data ) {
@@ -68,7 +68,7 @@ class actor {
             $hashed = true;
         }
 
-        trigger_error("----- Starting up runner with callsign ".$this->peer." -----");
+        note(debug,"----- Starting up runner with callsign ".$this->peer." -----");
 
 		if( is_callable(array($this,'startup')) ) {
 			$this->startup();
@@ -113,43 +113,7 @@ class actor {
 
                 // Commands to this node
                 if ( $pkt['to'] == $this->peer ) {
-                    if(isset($pkt['cmd']) && $pkt['cmd']=='getInterface'){
-                        if(isset($this->interface))
-                            $this->broadcast(array(
-                                'to' => $pkt['from'],
-                                'from' => $this->peer,
-                                'cmd' => 'ack',
-                                'ret' => $this->getInterface(),
-                                'msg' => sha1($in)
-                            ));
-                        continue;
-                    }
-                    trigger_error($pkt);
-                    // Answer on ping
-                    if ( $pkt['cmd'] == 'ping' ) {
-                        $this->broadcast(array(
-                            'to' => $pkt['from'],
-                            'from' => $this->peer,
-                            'cmd' => 'ack',
-                            'msg' => sha1($in)
-                        ));
-                        continue;
-                    }
-                    // Answer on ping
-                    if ( $pkt['cmd'] == 'checkin' ) {
-                        $this->broadcast(array(
-                            'to' => $pkt['from'],
-                            'from' => $this->peer,
-                            'cmd' => 'ack',
-                            'msg' => sha1($in)
-                        ));
-                        $this->checkin();
-                        continue;
-                    }
-
-                    $this->currmsg = sha1($in);
                     $res = $this->event( $pkt );
-                    $this->lastmsg = sha1($in);
 
                     if ( $res )
                         $this->broadcast(array(
@@ -169,21 +133,9 @@ class actor {
 
                 // Commands not to this node :)
                 } else {
-                    // Answer on hello
-                    if ( $pkt['cmd'] == 'hello' ) {
-                        trigger_error($pkt);
-                        $this->broadcast(array(
-                            'to' => $pkt['from'],
-                            'from' => $this->peer,
-                            'cmd' => 'greetings'
-                        ));
-                    }
-                    if ( $pkt['to'] == 'global' )
-                        trigger_error($pkt);
-
                     if ( $res = $this->event( $pkt ) ) {
                     	if ( $pkt['to'] != 'global' )
-	                       	trigger_error($pkt);
+	                       	note(debug,$pkt);
 
 						if ( $res )
 							$this->broadcast(array(

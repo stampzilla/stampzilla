@@ -4,9 +4,8 @@ require_once "constants.php";
 set_error_handler('errorhandler::error');
 
 class errorhandler {
-
     static function error( $no, $text, $file, $line, $context ) {
-		errorhandler::send( logLevel::error,"$file:$line" );
+		errorhandler::send( error,"$file:$line" );
         echo $text.'@'.$file.':'.$line."\n";
 	}
 
@@ -25,6 +24,14 @@ class errorhandler {
 		);
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8282);
 	}
+
+}
+
+function note($level,$text) {
+    if ( is_array($text) )
+        $text = json_encode($text);
+    errorhandler::send($level,$text);
+    echo $text."\n";
 }
 
 ?>
