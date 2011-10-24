@@ -10,6 +10,26 @@
 			pre {
 				margin:0px;
 			}
+
+            .critical {
+                color:#f00;
+            }
+
+            .error {
+                color:#ff8c00;
+            }
+
+            .warning {
+                color:#ff1493;
+            }
+
+            .notice {
+                color:#0000cd;
+            }
+
+            .debug {
+                color:#556b2f;
+            }
 		</style>
 	</head>
     <body>
@@ -51,18 +71,18 @@ class logger {
 
 	function textFormat($pkt) {
 		switch($pkt['level']) {
-			case logLevel::critical:
-        		return "<div>CRITICAL ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
-			case logLevel::error:
-        		return "<div>ERROR    ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
-			case logLevel::warning:
-        		return "<div>WARNING  ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
-			case logLevel::notice:
-        		return "<div>NOTICE   ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
-			case logLevel::debug:
-        		return "<div>DEBUG    ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+			case critical:
+        		return '<div class="critical">CRITICAL '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+			case error:
+        		return '<div class="error">ERROR    '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+			case warning:
+        		return '<div class="warning">WARNING  '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+			case notice:
+        		return '<div class="notice">NOTICE   '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+			case debug:
+        		return '<div class="debug">DEBUG    '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
 			default:
-        		return "<div>UNKNOWN  ".$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
+        		return '<div class="unknown">UNKNOWN  '.$this->currentTime()." EE ".trim($pkt['from'])." EE ".$pkt['message']."</div>";
 		}
 	}
 
