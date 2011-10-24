@@ -238,6 +238,10 @@ function command($cmd,$pwd = '') {
 
 			passthru("dpkg --info stampzilla_".VERSION."_all.deb");
         	break;
+        case 'send':
+            unset($arg[0]);
+            passthru("php send.php ".implode($arg," "));
+            break;
         default:
             return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
     }
