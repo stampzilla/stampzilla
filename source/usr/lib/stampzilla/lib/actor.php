@@ -18,7 +18,7 @@ class actor {
             $data['from'] = $this->peer;
 
         $pkg = json_encode($data);
-        trigger_error($pkg);
+        note(debug,$pkg);
         $this->udp->broadcast( $pkg );
 
         return sha1($pkg);
@@ -77,7 +77,7 @@ class actor {
         if ( $check_fnk ) {
             $this->pidParent = posix_getpid();
             if ( $this->pidChild = pcntl_fork() )
-                trigger_error('Forked process with pid:'.$this->pidChild);
+                note(debug,'Forked process with pid:'.$this->pidChild);
         } else
             $this->pidChild = '1';
 
@@ -98,7 +98,7 @@ class actor {
                     continue;
 
                 if ( isset($pkt['intercom']) && $pkt['intercom'] == $this->peer ) {
-                    trigger_error( $pkt );
+                    note(debug, $pkt );
                     $this->intercom_event( $pkt );
                     continue;
                 }
@@ -109,18 +109,26 @@ class actor {
                 if ( $pkt['from'] == $this->peer )
                     continue;
 
-                trigger_error($pkt);
+                note(debug,$pkt);
+
+                $call = null;
+                if(isset($pkt['type']) && is_callable(array($this,$pkt['type'])))
+                        $call = $pkt['type'];
+                if(isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])))
+                    $call = $pkt['cmd'];
+                if(!$call){
+                    $call = 'event';
+                }
 
                 // Commands to this node
                 if ( $pkt['to'] == $this->peer ) {
-                    $res = $this->event( $pkt );
+                        $res = $this->$call( $pkt );
 
                     if ( $res )
                         $this->broadcast(array(
                             'to' => $pkt['from'],
                             'from' => $this->peer,
                             'cmd' => 'ack',
-                            'msg' => sha1($in),
                             'ret' => $res
                         ));
                     elseif ( $res !== null )
@@ -128,12 +136,11 @@ class actor {
                             'to' => $pkt['from'],
                             'from' => $this->peer,
                             'cmd' => 'nak',
-                            'msg' => sha1($in)
                         ));
 
                 // Commands not to this node :)
                 } else {
-                    if ( $res = $this->event( $pkt ) ) {
+                    if ( $res = $this->$call( $pkt ) ) {
                     	if ( $pkt['to'] != 'global' )
 	                       	note(debug,$pkt);
 
@@ -142,7 +149,6 @@ class actor {
 								'to' => $pkt['from'],
 								'from' => $this->peer,
 								'cmd' => 'ack',
-								'msg' => sha1($in),
 								'ret' => $res
 							));
 						elseif ( $res !== null )
@@ -150,7 +156,6 @@ class actor {
 								'to' => $pkt['from'],
 								'from' => $this->peer,
 								'cmd' => 'nak',
-								'msg' => sha1($in)
 							));
                     }
                 }
