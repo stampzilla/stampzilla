@@ -1,12 +1,13 @@
 <?php
 
-require "constants.php";
+require_once "constants.php";
 set_error_handler('errorhandler::error');
 
 class errorhandler {
 
     static function error( $no, $text, $file, $line, $context ) {
 		errorhandler::send( logLevel::error,"$file:$line" );
+        echo $text.'@'.$file.':'.$line."\n";
 	}
 
 	static function send( $level, $msg ) {

@@ -1,11 +1,10 @@
 <?php
 
 class udp {
-    const port=8282;
-    const host= '0.0.0.0';
     private $sent = array();
 
     function __construct($host, $port) {
+        $this->port = $port;
         if ( !$this->s = socket_create( AF_INET, SOCK_DGRAM, SOL_UDP ) )
             trigger_error("Failed to create send socket");
 
@@ -17,7 +16,7 @@ class udp {
 
     function broadcast( $string ) {
         $this->sent[$string] = 1;
-        socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', self::port);
+        socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', $this->port);
     }
 
     function listen( ) {
