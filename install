@@ -1,4 +1,11 @@
 #!/bin/bash
+if [ "$(id -u)" != "0" ]; then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+aptitude remove stampzilla
+
 ln -sf `pwd`/source/usr/bin/stampzilla /usr/bin/stampzilla
 ln -sf `pwd`/source/usr/share/stampzilla /usr/share/stampzilla
 ln -sf `pwd`/source/usr/lib/stampzilla /usr/lib/stampzilla
