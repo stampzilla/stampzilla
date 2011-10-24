@@ -136,13 +136,13 @@ function command($cmd,$pwd = '') {
 				return !trigger_error("Failed to create tmp dir ($tmp/control)",E_USER_WARNING);
 
 			// Copy all files
-			if ( !cpr('/usr/share/man/man1/stampzilla.1',$tmp) ) 
+			if ( !cpr('/usr/share/man/man1/stampzilla.1.gz',$tmp) ) 
 				return false;
-			exec("gzip --best $tmp/usr/share/man/man1/stampzilla.1");
+			//exec("gzip --best $tmp/usr/share/man/man1/stampzilla.1.gz");
 
 			if ( !cpr('/usr/share/doc/stampzilla',$tmp) ) 
 				return false;
-			exec("gzip --best $tmp/usr/share/doc/stampzilla/changelog");
+			//exec("gzip --best $tmp/usr/share/doc/stampzilla/changelog");
 
 			if ( !cpr('/usr/lib/stampzilla/',$tmp) ) 
 				return false;
@@ -291,6 +291,12 @@ function cpr( $from, $to ) {
 
 	$from = rtrim($from,'/');
 	$to = rtrim($to,'/');
+
+    if ( is_link($from) )
+        $from = readlink($from);
+
+    if ( is_link($to) )
+        $to = readlink($to);
 
 	if ( is_dir($from) ) {
 		$content = scandir($from);
