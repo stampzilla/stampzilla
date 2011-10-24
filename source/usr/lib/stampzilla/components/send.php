@@ -53,8 +53,8 @@ class sender extends actor{
 
         if( $pkt['to'] = $this->peer && $pkt['msg'] = $this->msg ) {
             if ( $pkt['cmd'] == 'ack' ) {
-                logger::text('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
-                logger::text('Success!');
+                note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
+                note(debug,'Success!');
 
                 if(isset($pkt['answer'])){
                     $data['answer'] = $pkt['answer'];
@@ -71,8 +71,8 @@ class sender extends actor{
                     die();
                 }
             } elseif( $pkt['to'] = $this->peer && $pkt['cmd'] == 'nak' && $pkt['msg'] = $this->msg ) {
-                logger::text('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
-                logger::text('Failed to execute command!');
+                note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
+                note(error,'Failed to execute command!');
 
                 if ( $this->fromweb ) {
                     die();
@@ -84,8 +84,8 @@ class sender extends actor{
             elseif($pkt['cmd'] == 'timeout'){
                 $data['success'] = false;
                 $data['timeout'] = true;
-                logger::text('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
-                logger::text('Timeout recieved!');
+                note('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
+                note(error,'Timeout recieved!');
                 die();
             }
         }
@@ -106,7 +106,8 @@ class sender extends actor{
     function checkTimeout() {
         global $start;
         sleep(2);
-        trigger_error('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
+        note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
+        note(error,'Timeout reached!');
         posix_kill($this->pidParent, SIGTERM);
         die();
     }

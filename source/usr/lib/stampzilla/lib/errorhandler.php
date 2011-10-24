@@ -5,11 +5,11 @@ set_error_handler('errorhandler::error');
 
 class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
-		errorhandler::send( error,"$file:$line" );
+		errorhandler::send( error,$text,array('file'=>$file,'line'=>$line) );
         echo $text.'@'.$file.':'.$line."\n";
 	}
 
-	static function send( $level, $msg ) {
+	static function send( $level, $msg, $data=array() ) {
 		if ( !$s = socket_create( AF_INET, SOCK_DGRAM, SOL_UDP ) )
             die("Failed to create error send socket");
 
@@ -19,7 +19,8 @@ class errorhandler {
 				'type' => 'log',
 				'from' => '???',
 				'level' => $level,
-				'message' => $msg
+				'message' => $msg,
+                'data' => $data
 			)
 		);
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8282);
