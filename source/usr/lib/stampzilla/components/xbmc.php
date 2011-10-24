@@ -8,6 +8,9 @@ require_once "../lib/actor.php";
 
 class xbmc extends actor {
     private $id = 0;
+    private $commands = array(
+        'play'=>'play'
+        );
 	function __construct() {
         parent::__construct();
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
@@ -33,6 +36,7 @@ class xbmc extends actor {
             $this->send(json_encode($pkt['raw']));
         elseif(is_string($pkt['raw']))
             $this->send($pkt['raw']);
+        return true;
     }
 
     function send($text){
