@@ -51,7 +51,7 @@ class sender extends actor{
         //    print_r($pkt['data']);
         //}
 
-        if( $pkt['to'] = $this->peer && $pkt['msg'] = $this->msg ) {
+        if( $pkt['to'] = $this->peer && $pkt['msg'] = $this->msg && isset($pkt['cmd']) ) {
             if ( $pkt['cmd'] == 'ack' ) {
                 note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
                 note(debug,'Success!');

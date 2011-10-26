@@ -1,5 +1,10 @@
 <?php
 
+declare(ticks = 1);
+
+require_once("udp.php");
+require_once("errorhandler.php");
+
 class actor {
     private $parent = 0;
     private $child = 0;
@@ -10,7 +15,6 @@ class actor {
         $this->peer = '';
 
         define('actor',get_class($this));
-        note(debug,"----- Starting up new actor named ".get_class($this)." -----");
     }
 
     function broadcast( $data ) {
@@ -24,12 +28,6 @@ class actor {
         return sha1($pkg);
     }
 
-    function checkin() {
-        $this->broadcast($this->peer.'|php|parent:'.$this->parent.'|child:'.$this->child.'|pid:'.$this->pid);
-        $this->parent=0;
-        $this->child=0;
-    }
-
     function exec( $to, $cmd ) {
         $this->broadcast(array(
             'to' => $to,
@@ -38,28 +36,108 @@ class actor {
         ));
     }
 
-    function intercom( $data ) {
-        $data['intercom'] = $this->peer;
+    function intercom( ) {
+		// Send the message
+		$ic = json_encode( func_get_args() )."\n";
+		if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
+			$code = socket_last_error();
+			if ( $code == 32 )
+				die("Intercom socket broken, DIE");
 
-        $this->udp->broadcast( json_encode($data) );
+			return trigger_error("Failed to send intercom using IC socket: $code");
+		}
+
+		// Send the alarm signal to parent
+		posix_kill( $this->parent_pid, SIGALRM );
     }
 
-    function getInterface(){
+	function recive_intercom() {
+		// Add the signal handler again
+		if ( !pcntl_signal( SIGALRM,array($this,'recive_intercom') ) )
+			trigger_error("Failed to install signal handler");
 
-        if( !array_key_exists('name',$this->interface))
-            return array('error'=>'no name set');
-        if( !array_key_exists('type',$this->interface))
-            return array('error'=>'no type set');
-        if( !array_key_exists('events',$this->interface))
-            return array('error'=>'no events set');
-        if( !array_key_exists('commands',$this->interface))
-            return array('error'=>'no commands set');
+		// Read the message
+		if ( ($line = socket_read($this->intercom_socket, 1024, PHP_NORMAL_READ)) !== false ) {
+			if ( ($args = json_decode($line)) === NULL )
+				return trigger_error("Syntax error in intercom JSON (".trim($line).")");
 
-        //return array_intersect_assoc($this->interface,array('name','type','events','commands'));
-        return $this->interface;
-    }
+			// Call the intercom_event
+			if ( is_callable(array($this,'intercom_event')) )
+				call_user_func_array( array($this,'intercom_event'),$args );
+			else
+				trigger_error("Got intercom event but no intercom_event function exists!");
+		}
+	}
 
-    function start( $id,$check_fnk='' ) {
+	function parent_loop() {
+		while(1) {
+			// Wait for a udp package
+			if ( !$pkt = $this->udp->listen() )
+				continue;
+
+			// Ignore invalid packages
+			if ( !isset($pkt['from']) || (!isset($pkt['cmd'])&&!isset($pkt['type'])) )
+				continue;
+
+			if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
+				note(debug,$pkt);
+
+			//die("DOE");
+
+			// Event function is the default
+			$call = 'event';
+
+			// All standard packet types, ex log,event and so on
+			if( isset($pkt['type']) && is_callable(array($this,$pkt['type'])) )
+				$call = strtolower($pkt['type']);
+
+			// CMD packages, send directly to function the corresponding function, if it exists
+			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) )
+				$call = strtolower($pkt['cmd']);
+	
+			// Call the function
+			if ( is_callable(array($this,$call)) )
+				$res = $this->$call( $pkt );
+			else
+				$res = null;
+
+			// If the packet is to this component, answer with result, NULL = fail = nak
+			if ( !isset($pkt['to']) || $pkt['to'] == $this->peer ) {
+				if ( $res )
+					$this->broadcast(array(
+						'to' => $pkt['from'],
+						'from' => $this->peer,
+						'cmd' => 'ack',
+						'ret' => $res
+					));
+				elseif ( $res !== null )
+					$this->broadcast(array(
+						'to' => $pkt['from'],
+						'from' => $this->peer,
+						'cmd' => 'nak',
+					));
+			}
+		}
+	}
+
+	function child_loop($function) {
+    	while(1) {
+        	call_user_func(array($this,$function));
+        }
+	}
+
+	function kill_parent() {
+		note(warning, "Died, killing child");
+		posix_kill( $this->parent_pid, 9 );
+	}
+
+	function kill_child() {
+		note(warning, "Died, killing child");
+		posix_kill( $this->child_pid, 9 );
+	}
+
+
+    function start( $id, $child=null ) {
         $this->peer = $id;
 
         // Create a name if the node dosnt have one
@@ -68,106 +146,63 @@ class actor {
             $hashed = true;
         }
 
-        note(debug,"----- Starting up runner with callsign ".$this->peer." -----");
+        note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
 
 		if( is_callable(array($this,'startup')) ) {
 			$this->startup();
 		}
 
-        if ( $check_fnk ) {
-            $this->pidParent = posix_getpid();
-            if ( $this->pidChild = pcntl_fork() )
-                note(debug,'Forked process with pid:'.$this->pidChild);
-        } else
-            $this->pidChild = '1';
+		// No childprocess needed, start the main loop directly
+        if ( !$child )
+			return $this->parent_loop();
+		
+		// Create a intercom socket between parent and child process
+		$sockets = array();
+		if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
+			return trigger_error("Failed to create socket pair: ".socket_strerror(socket_last_error()));
+		}
 
-        if ( $this->pidChild == -1 ) {
-            trigger_error('Failed to fork');
-            die();
-        } elseif ( $this->pidChild ) { // Parent
-            if ( !isset($hashed) )
-                $this->broadcast(array(
-                    'to' => 'global',
-                    'from' => $this->peer,
-                    'cmd' => 'greetings'
-                ));
+		// Fork a child process
+		if ( ($this->child_pid = pcntl_fork()) == -1 )
+            return trigger_error('Failed to fork');
+		
+		note(debug,'Forked process with pid:'.$this->child_pid);
 
-            while(1) {
-                $this->parent++;
-                if ( !$pkt = $this->udp->listen() )
-                    continue;
+        if ( $this->child_pid ) {
+			// Add an signal handler so the child can notify the parent when there are new intercom data
+			pcntl_signal( SIGALRM,array($this,'recive_intercom') );
 
-                if ( isset($pkt['intercom']) && $pkt['intercom'] == $this->peer ) {
-                    note(debug, $pkt );
-                    $this->intercom_event( $pkt );
-                    continue;
-                }
+			// Make sure we dont leave any childs
+			register_shutdown_function(array($this,'kill_child') );
 
-                if ( !isset($pkt['from']) || !isset($pkt['to']) || !isset($pkt['cmd']) )
-                    continue;
+			// Save the intercom socket, and close the other
+			$this->intercom_socket = $sockets[0]; // Reader
+			//socket_set_nonblock( $this->intercom_socket );
+			socket_close( $sockets[1] );
 
-                if ( $pkt['from'] == $this->peer )
-                    continue;
+			// Say hello to the network
+			if ( !isset($hashed) ) 
+				$this->broadcast(array(
+					'from' => $this->peer,
+					'cmd' => 'greetings'
+				));
 
-                note(debug,$pkt);
+			// Parent
+			note( debug, "Starting parent loop" );
+			$this->parent_loop();
+        } else {
+			// Make shure we stop the parent if child dies
+			register_shutdown_function(array($this,'kill_parent') );
 
-                $call = null;
-                if(isset($pkt['type']) && is_callable(array($this,$pkt['type'])))
-                        $call = $pkt['type'];
-                if(isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])))
-                    $call = $pkt['cmd'];
-                if(!$call){
-                    $call = 'event';
-                }
+			// Save the intercom socket, and close the other
+			$this->intercom_socket = $sockets[1]; // Writer
+			socket_close($sockets[0]);
 
-                // Commands to this node
-                if ( $pkt['to'] == $this->peer ) {
-                        $res = $this->$call( $pkt );
+			$this->parent_pid = posix_getppid();
 
-                    if ( $res )
-                        $this->broadcast(array(
-                            'to' => $pkt['from'],
-                            'from' => $this->peer,
-                            'cmd' => 'ack',
-                            'ret' => $res
-                        ));
-                    elseif ( $res !== null )
-                        $this->broadcast(array(
-                            'to' => $pkt['from'],
-                            'from' => $this->peer,
-                            'cmd' => 'nak',
-                        ));
-
-                // Commands not to this node :)
-                } else {
-                    if ( $res = $this->$call( $pkt ) ) {
-                    	if ( $pkt['to'] != 'global' )
-	                       	note(debug,$pkt);
-
-						if ( $res )
-							$this->broadcast(array(
-								'to' => $pkt['from'],
-								'from' => $this->peer,
-								'cmd' => 'ack',
-								'ret' => $res
-							));
-						elseif ( $res !== null )
-							$this->broadcast(array(
-								'to' => $pkt['from'],
-								'from' => $this->peer,
-								'cmd' => 'nak',
-							));
-                    }
-                }
-            }
-        } else { // Child
-            if ( $check_fnk ) {
-                while(1) {
-                    $this->parent++;
-                    call_user_func(array($this,$check_fnk));
-                }
-            }
-            trigger_error('Forked child has nothing to do, exits');
+			// Child
+			note( debug, "Starting child loop" );
+			$this->child_loop($child);
         }
     }
 }
