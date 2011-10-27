@@ -1,8 +1,8 @@
 <?php
 
-require_once("../lib/actor.php");
+require_once("../lib/component.php");
 
-class intercomtest extends actor {
+class intercomtest extends component {
 	
 	function intercom_event() {
 		echo "Parent recived\n";

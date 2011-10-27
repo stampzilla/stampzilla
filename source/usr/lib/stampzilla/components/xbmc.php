@@ -1,12 +1,7 @@
 <?php
+require_once "../lib/component.php";
 
-require_once "../lib/errorhandler.php";
-require_once "../lib/constants.php";
-require_once "../lib/udp.php";
-require_once "../lib/actor.php";
-
-
-class xbmc extends actor {
+class xbmc extends component {
     private $id = 0;
     private $commands = array(
         'play'=>'play'

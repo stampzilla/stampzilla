@@ -20,16 +20,14 @@ if ( $fromweb ) {
 }
 
 $start = microtime(true);
-require_once '../lib/udp.php';
-require_once '../lib/actor.php';
-require_once '../lib/errorhandler.php';
+require_once '../lib/component.php';
 
 $data = array(
     'success' => false,
     'timeout' => false
 );
 
-class sender extends actor{
+class sender extends component{
     function json( ) {
         global $log,$data;
 

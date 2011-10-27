@@ -5,7 +5,7 @@ declare(ticks = 1);
 require_once("udp.php");
 require_once("errorhandler.php");
 
-class actor {
+class component {
     private $parent = 0;
     private $child = 0;
     private $pid = 0;
@@ -14,7 +14,6 @@ class actor {
         $this->udp = new udp('0.0.0.0',8282);
         $this->peer = '';
 
-        define('actor',get_class($this));
     }
 
     function broadcast( $data ) {
