@@ -27,14 +27,6 @@ class component {
         return sha1($pkg);
     }
 
-    function exec( $to, $cmd ) {
-        $this->broadcast(array(
-            'to' => $to,
-            'from' => $this->peer,
-            'cmd' => $cmd
-        ));
-    }
-
     function intercom( ) {
 		// Send the message
 		$ic = json_encode( func_get_args() )."\n";
@@ -91,7 +83,7 @@ class component {
 				$call = strtolower($pkt['type']);
 
 			// CMD packages, send directly to function the corresponding function, if it exists
-			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) )
+			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak')) )
 				$call = strtolower($pkt['cmd']);
 	
 			// Call the function
@@ -103,21 +95,33 @@ class component {
 			// If the packet is to this component, answer with result, NULL = fail = nak
 			if ( !isset($pkt['to']) || $pkt['to'] == $this->peer ) {
 				if ( $res )
-					$this->broadcast(array(
-						'to' => $pkt['from'],
-						'from' => $this->peer,
-						'cmd' => 'ack',
-						'ret' => $res
-					));
+                    $this->ack($pkt['from'],$res);
 				elseif ( $res !== null )
-					$this->broadcast(array(
-						'to' => $pkt['from'],
-						'from' => $this->peer,
-						'cmd' => 'nak',
-					));
+                    $this->nak($pkt['from']);
 			}
 		}
 	}
+    //can be called to acknowledge a packet to the sender.
+    function ack($to,$ret=NULL){
+	    $this->broadcast(array(
+            'to' => $to,
+            'cmd' => 'ack',
+            'ret' => $ret
+        ));
+    }
+
+    function nak($to){
+	    $this->broadcast(array(
+            'to' => $to,
+            'cmd' => 'nak',
+        ));
+    }
+    function broadcast_event($event){
+	    $this->broadcast(array(
+            'type' => 'event',
+            'event' => $event
+        ));
+    }
 
 	function child_loop($function) {
     	while(1) {
@@ -136,8 +140,9 @@ class component {
 	}
 
 
-    function start( $id, $child=null ) {
-        $this->peer = $id;
+    function start( $id=NULL, $child=null ) {
+        if($id)
+            $this->peer = $id;
 
         // Create a name if the node dosnt have one
         if ( !$this->peer ) {

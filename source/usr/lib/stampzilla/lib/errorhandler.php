@@ -5,8 +5,39 @@ set_error_handler('errorhandler::error');
 
 class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
-		errorhandler::send( error,$text,array('file'=>$file,'line'=>$line) );
-        echo $text.'@'.$file.':'.$line."\n";
+
+        switch($no){
+            case E_PARSE:
+            case E_CORE_ERROR:
+            case E_CORE_ERROR:
+            case E_COMPILE_ERROR:
+            case E_RECOVERABLE_ERROR:
+                $level = critical;
+                break;
+            case E_USER_ERROR:
+            case E_ERROR:
+            case E_STRICT:
+            case E_DEPRECATED:
+            case E_USER_DEPRECATED:
+                $level = error;
+                break;
+            case E_USER_WARNING:
+            case E_CORE_WARNING:
+            case E_WARNING:
+            case E_COMPILE_WARNING:
+                $level = warning;
+                break;
+            case E_NOTICE:
+            case E_USER_NOTICE:
+                $level = notice;
+                break;
+            default:
+                $level = unknown;
+        }
+        
+
+		errorhandler::send( $level,$text,array('file'=>$file,'line'=>$line) );
+        echo format($level,$text.'@'.$file.':'.$line);
 	}
 
 	static function send( $level, $msg, $data=array() ) {
@@ -39,25 +70,31 @@ function note($level,$text) {
         $text = json_encode($text);
 
     errorhandler::send($level,$text);
+    
+    echo format($level,$text);
 
-    switch($level) {
+ 
+}
+
+function format($level,$text){
+   switch($level) {
         case critical:
-            echo "\033[31mCRITICAL ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[31mCRITICAL ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
         case error:
-            echo "\033[31mERROR    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[31mERROR    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
         case warning:
-            echo "\033[35mWARNING  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[35mWARNING  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
         case notice:
-            echo "\033[34mNOTICE   ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[34mNOTICE   ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
         case debug:
-            echo "\033[32mDEBUG    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[32mDEBUG    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
         default:
-            echo "\033[36mUNKNOWN  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
+            return "\033[36mUNKNOWN  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
             break;
     }
 }

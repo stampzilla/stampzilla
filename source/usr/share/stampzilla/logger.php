@@ -55,7 +55,7 @@ class logger {
 				continue;
 
 			// Ignore packages that arent errors
-			if ( $pkt['type'] != 'log' ) 
+			if (!isset($pkt['type']) || $pkt['type'] != 'log' ) 
 				continue;
 
 			// Format message

@@ -2,7 +2,10 @@
 require_once "../lib/component.php";
 
 class xbmc extends component {
-    private $id = 0;
+    private $id = 1;
+    private $active_player ='';
+    private $lastcmd = array();
+    protected $componentclasses = array('video.player','audio.player');
     private $commands = array(
         'play'=>'play'
         );
@@ -10,6 +13,9 @@ class xbmc extends component {
         parent::__construct();
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
         socket_connect($this->socket,'xbmc.lan',9090);
+
+        $this->json('JSONRPC.Version');
+        $this->json('Player.GetActivePlayers');
 
 	}
     function getId(){
@@ -20,12 +26,12 @@ class xbmc extends component {
     }
 
     function event($pkt){
-        return false;
-        $tmp =  $this->json($pkt['cmd']);
-        $this->send($tmp);
+        return null;
+        $this->json($pkt['cmd']);
         return true;
     }
 
+    //handle raw packets sent like this: to=xbmc-test&type=cmd&cmd=raw&raw={"jsonrpc": "2.0", "method": "VideoLibrary.GetMovies","params":{"fields":["title"]},"id": 1}}}
     function raw($pkt) {
         if(is_array($pkt['raw']))
             $this->send(json_encode($pkt['raw']));
@@ -34,12 +40,141 @@ class xbmc extends component {
         return true;
     }
 
-    function send($text){
-        note(debug,$text);
-        socket_write($this->socket,$text."\n\r",strlen($text));
+    function cmd($pkt){
+        $this->json($pkt['run'],null,array('to'=>$pkt['from']));
     }
 
-    function json($cmd,$params=null){
+    //COMMANDS FOR CONTROLING PLAYER
+
+    function play($pkt){
+        if( $this->active_player && $this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,array('to'=>$pkt['from']));
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    function pause($pkt){
+        if( $this->active_player && !$this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,array('to'=>$pkt['from']));
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    //stop active player
+    function stop($pkt){
+
+        if($this->active_player){
+            $this->json($this->active_player.'Player.Stop',null,array('to'=>$pkt['from']));
+        }
+        else
+            $this->nak($pkt['from']);
+
+    }
+
+    function gettime($pkt){
+        if($this->active_player && $this->active_player != 'Picture'){
+            $this->json($this->active_player.'Player.GetTime',null,array('to'=>$pkt['from']));
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+
+
+    function send($text){
+        note(debug,$text);
+        return socket_write($this->socket,$text."\n\r",strlen($text));
+    }
+
+    function intercom_event($event){
+
+        // Decode the incomming message
+        note(debug,"From XBMC: \n".$event);
+        $event = json_decode($event);
+
+        // Handle error messages
+        if(isset($event->error)){
+            if ( $this->lastcmd[$event->id]['var']['to'] )
+                $this->nak( $this->lastcmd[$event->id]['var']['to'] );
+
+            return trigger_error($event->error->message,E_USER_ERROR);
+        };
+
+        // Handle sent commands
+        if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
+            $cmd = $this->lastcmd[$event->id]['data'];
+            $var = $this->lastcmd[$event->id]['var'];
+            unset($this->lastcmd[$event->id]);
+
+            if ( isset($var['to']) )
+                $this->ack($var['to'],$event);
+
+            switch($cmd['method']) {
+                case 'JSONRPC.Version':
+                    $this->api_version = $event->result->version;
+
+                    if ( $this->api_version != 2 ){
+                        trigger_error("Unsupported JSON.RPC API version ({$this->api_version})",E_USER_ERROR);
+                        die();
+                    }
+                    break;
+                case 'Player.GetActivePlayers':
+                    if($event->result->video)
+                        $this->active_player = 'Video';
+                    if($event->result->audio)
+                        $this->active_player = 'Audio';
+                    if($event->result->picture)
+                        $this->active_player = 'Picture';
+                    if($this->active_player){
+                        $this->json($this->active_player.'Player.State');
+                    }
+                        
+                    break;
+                case 'VideoPlayer.State':
+                case 'PicturePlayer.State':
+                case 'AudioPlayer.State':
+                    $this->state = $event->result;
+                    if($this->state->paused)
+                        $this->broadcast_event('pause');
+                    else
+                        $this->broadcast_event('play');
+                    break;
+
+            }
+        } else {
+        // Handle broadcasts
+            if(isset($event->method)){
+                switch($event->method){
+                    case 'Announcement':
+                        switch($event->params->message){
+                            case 'PlaybackResumed':
+                                $this->state->paused = false;
+                                $this->broadcast_event('play');
+                                break;
+                            case 'PlaybackPaused':
+                                $this->state->paused = true;
+                                $this->broadcast_event('pause');
+                                break;
+                            case 'PlaybackStopped':
+                                $this->active_player = '';
+                                $this->state->paused = false;
+                                $this->broadcast_event('stop');
+                                break;
+                            case 'PlaybackStarted':
+                                $this->json('Player.GetActivePlayers');
+                                break;
+                        }
+                        break;
+                    case 'test':
+
+                        break;
+                }
+
+            }
+        }
+    }
+
+    function json($cmd,$params=null,$var = array()){
+
 
         $data = array(
             'jsonrpc'=>"2.0",
@@ -51,20 +186,23 @@ class xbmc extends component {
         if($params==null)
             unset($data['params']);
 
-        return json_encode($data);
+        $this->lastcmd[$this->id] = array('var'=>$var,'data'=>$data);
+        $text =  json_encode($data);
+        return $this->send($text);
     }
 
     function readSocket(){
         if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
             //$this->intercom(array('error'=>socket_strerror(socket_last_error($this->socket)),'status'=>'died'));
-            echo "died in child";
             die();
         }
         $this->buff .= $buff;
-        while ( $pos = strpos($this->buff,"}\n")){
+        //while ( $pos = strpos($this->buff,"}\n")){
+        while ( $pos = preg_match('/\}(\{|$)/',$this->buff,$match,PREG_OFFSET_CAPTURE)){
+            $pos = $match[0][1];
             $cmd = substr($this->buff,0,$pos+1);
             $this->buff = substr($this->buff,$pos+1);
-            echo $cmd;
+            $this->intercom($cmd);
         }
 
     }

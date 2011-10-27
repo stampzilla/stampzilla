@@ -18,9 +18,9 @@ if ( isset($_SERVER["argv"][1]) ) {
 	command("help");
 }
 
-if ( !is_file('/etc/stampzilla') )
-    if ( file_put_contents('/etc/stampzilla','') === false )
-        trigger_error("Failed to create /etc/stampzilla, check access\n",E_USER_ERROR);
+//if ( !is_file('/etc/stampzilla') )
+//    if ( file_put_contents('/etc/stampzilla','') === false )
+//        trigger_error("Failed to create /etc/stampzilla, check access\n",E_USER_ERROR);
 
 function command($cmd,$pwd = '') {
     if ( is_string($cmd) )
@@ -240,7 +240,8 @@ function command($cmd,$pwd = '') {
         	break;
         case 'send':
             unset($arg[0]);
-            passthru("php send.php ".implode($arg," "));
+            print_r($arg);
+            passthru("php send.php \"".implode($arg,"\" \"").'"');
             break;
         default:
             return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);

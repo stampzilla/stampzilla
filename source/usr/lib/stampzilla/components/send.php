@@ -65,7 +65,7 @@ class sender extends component{
                         $data['ret'] = $pkt['ret'];
                     die();
                 } else {
-                    posix_kill($this->pidChild, SIGTERM);
+                    posix_kill($this->child_pid, SIGTERM);
                     die();
                 }
             } elseif( $pkt['to'] = $this->peer && $pkt['cmd'] == 'nak' && $pkt['msg'] = $this->msg ) {
@@ -75,7 +75,7 @@ class sender extends component{
                 if ( $this->fromweb ) {
                     die();
                 } else {
-                    posix_kill($this->pidChild, SIGTERM);
+                    posix_kill($this->child_pid, SIGTERM);
                     die();
                 }
             } 
@@ -106,7 +106,7 @@ class sender extends component{
         sleep(2);
         note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
         note(error,'Timeout reached!');
-        posix_kill($this->pidParent, SIGTERM);
+        posix_kill($this->parent_pid, SIGTERM);
         die();
     }
 }
@@ -126,6 +126,6 @@ if ( !$fromweb ) {
     }
 
     register_shutdown_function('shutdown');
-    $c->start('');
+    $c->start();
 }
 ?>
