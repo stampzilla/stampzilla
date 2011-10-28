@@ -274,7 +274,7 @@ $layout = array(
 					len = movies.length;
 					$('movie_files').innerHTML = '';
 					for(var a=0;a<len;a++) {
-						list += '<div><a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');">'+movies[a].label+'</a></div>';
+						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');" style="background-image:url(http://loke:8080/vfs/'+movies[a].thumbnail+');" class="movie"><div>'+movies[a].label+'</div></a>';
 					}
 					$('movie_files').innerHTML = list;
 				}
