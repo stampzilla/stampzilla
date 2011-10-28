@@ -162,6 +162,14 @@ body {
     padding:10px;
 }
 
+.main .page {
+	display:none;
+}
+
+.main .active {
+	display:block;
+}
+
 .iPhone .main {
     top:0px;
 }

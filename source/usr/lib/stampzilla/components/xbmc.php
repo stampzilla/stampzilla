@@ -12,7 +12,7 @@ class xbmc extends component {
 	function __construct() {
         parent::__construct();
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'xbmc.lan',9090);
+        socket_connect($this->socket,'localhost',9090);
 
         $this->json('JSONRPC.Version');
         $this->json('Player.GetActivePlayers');
@@ -40,22 +40,34 @@ class xbmc extends component {
         return true;
     }
 
+	//recive a command and send it to xbmc
     function cmd($pkt){
-        $this->json($pkt['run'],null,array('to'=>$pkt['from']));
+        $this->json($pkt['run'],null,$pkt);
     }
+
+	function state($pkt){
+		return $this->state;
+	}
+	function media($pkt){
+        $this->json('VideoLibrary.GetMovies',array('fields'=>'title'),$pkt);
+	}
 
     //COMMANDS FOR CONTROLING PLAYER
 
     function play($pkt){
         if( $this->active_player && $this->state->paused){
-            $this->json('VideoPlayer.PlayPause',null,array('to'=>$pkt['from']));
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
         }
         else
             $this->nak($pkt['from']);
     }
+    function playMovie($pkt){
+            $this->json('XBMC.Play',array('movieid'=>(int)$pkt['file']),$pkt);
+		return true;
+    }
     function pause($pkt){
         if( $this->active_player && !$this->state->paused){
-            $this->json('VideoPlayer.PlayPause',null,array('to'=>$pkt['from']));
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
         }
         else
             $this->nak($pkt['from']);
@@ -64,7 +76,7 @@ class xbmc extends component {
     function stop($pkt){
 
         if($this->active_player){
-            $this->json($this->active_player.'Player.Stop',null,array('to'=>$pkt['from']));
+            $this->json($this->active_player.'Player.Stop',null,$pkt);
         }
         else
             $this->nak($pkt['from']);
@@ -73,7 +85,7 @@ class xbmc extends component {
 
     function gettime($pkt){
         if($this->active_player && $this->active_player != 'Picture'){
-            $this->json($this->active_player.'Player.GetTime',null,array('to'=>$pkt['from']));
+            $this->json($this->active_player.'Player.GetTime',null,$pkt);
         }
         else
             $this->nak($pkt['from']);
@@ -94,10 +106,11 @@ class xbmc extends component {
         // Handle error messages
         if(isset($event->error)){
             if ( $this->lastcmd[$event->id]['var']['to'] )
-                $this->nak( $this->lastcmd[$event->id]['var']['to'] );
+                $this->nak( $this->lastcmd[$event->id]['var'] );
 
-            return trigger_error($event->error->message,E_USER_ERROR);
+            return trigger_error($event->error->message,E_USER_WARNING);
         };
+
 
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
@@ -105,8 +118,9 @@ class xbmc extends component {
             $var = $this->lastcmd[$event->id]['var'];
             unset($this->lastcmd[$event->id]);
 
+
             if ( isset($var['to']) )
-                $this->ack($var['to'],$event);
+                $this->ack($var,$event);
 
             switch($cmd['method']) {
                 case 'JSONRPC.Version':
@@ -124,21 +138,27 @@ class xbmc extends component {
                         $this->active_player = 'Audio';
                     if($event->result->picture)
                         $this->active_player = 'Picture';
+
                     if($this->active_player){
                         $this->json($this->active_player.'Player.State');
-                    }
+                    } else {
+						$this->state = new stdClass();
+						$this->state->paused = false;
+						$this->state->playing = false;
+					}
                         
                     break;
+				case 'VideoLibrary.GetMovies':
+					break;
                 case 'VideoPlayer.State':
                 case 'PicturePlayer.State':
                 case 'AudioPlayer.State':
                     $this->state = $event->result;
                     if($this->state->paused)
-                        $this->broadcast_event('pause');
+                        $this->broadcast_event('state',$this->state);
                     else
-                        $this->broadcast_event('play');
+                        $this->broadcast_event('state',$this->state);
                     break;
-
             }
         } else {
         // Handle broadcasts
@@ -148,16 +168,17 @@ class xbmc extends component {
                         switch($event->params->message){
                             case 'PlaybackResumed':
                                 $this->state->paused = false;
-                                $this->broadcast_event('play');
+                                $this->broadcast_event('state',$this->state);
                                 break;
                             case 'PlaybackPaused':
                                 $this->state->paused = true;
-                                $this->broadcast_event('pause');
+                                $this->broadcast_event('state',$this->state);
                                 break;
                             case 'PlaybackStopped':
                                 $this->active_player = '';
                                 $this->state->paused = false;
-                                $this->broadcast_event('stop');
+                                $this->state->playing = false;
+                                $this->broadcast_event('state',$this->state);
                                 break;
                             case 'PlaybackStarted':
                                 $this->json('Player.GetActivePlayers');
@@ -193,12 +214,10 @@ class xbmc extends component {
 
     function readSocket(){
         if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
-            //$this->intercom(array('error'=>socket_strerror(socket_last_error($this->socket)),'status'=>'died'));
             die();
         }
         $this->buff .= $buff;
-        //while ( $pos = strpos($this->buff,"}\n")){
-        while ( $pos = preg_match('/\}(\{|$)/',$this->buff,$match,PREG_OFFSET_CAPTURE)){
+        while ( $pos = preg_match('/\}((\n?\{)|$)/',$this->buff,$match,PREG_OFFSET_CAPTURE)){
             $pos = $match[0][1];
             $cmd = substr($this->buff,0,$pos+1);
             $this->buff = substr($this->buff,$pos+1);

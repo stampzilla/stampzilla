@@ -20,7 +20,7 @@ class udp {
     }
 
     function listen( ) {
-        $pkt = stream_socket_recvfrom($this->r,12000,0,$peer);
+        $pkt = stream_socket_recvfrom($this->r,120000000,0,$peer);
 
 		// Ignore prev sent messages
         if ( isset($this->sent[$pkt]) ) {

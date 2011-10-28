@@ -5,6 +5,8 @@ set_error_handler('errorhandler::error');
 
 class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
+		if($no & 32767)
+			return false;
 
         switch($no){
             case E_PARSE:

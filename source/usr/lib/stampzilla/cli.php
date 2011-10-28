@@ -243,6 +243,24 @@ function command($cmd,$pwd = '') {
             print_r($arg);
             passthru("php send.php \"".implode($arg,"\" \"").'"');
             break;
+		case 'log':
+			require_once("lib/udp.php");
+			require_once("lib/errorhandler.php");
+
+			$udp = new udp('0.0.0.0',8282);
+			while(1) {
+				if ( !$pkt = $udp->listen() )
+					continue;
+
+				// Ignore packages that arent errors
+				if (!isset($pkt['type']) || $pkt['type'] != 'log' ) 
+					continue;
+
+				// Format message
+				echo format($pkt['level'],$pkt['message']);
+			}
+
+				
         default:
             return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
     }

@@ -48,16 +48,27 @@ class component {
 			trigger_error("Failed to install signal handler");
 
 		// Read the message
-		if ( ($line = socket_read($this->intercom_socket, 1024, PHP_NORMAL_READ)) !== false ) {
-			if ( ($args = json_decode($line)) === NULL )
-				return trigger_error("Syntax error in intercom JSON (".trim($line).")");
+
+		$buff = '';
+		while( (@socket_recv($this->intercom_socket,$bytes, 1, MSG_DONTWAIT) ) ){
+			$buff .= $bytes;
+        }
+
+		$buff = explode("\n",$buff);
+
+        foreach ( $buff as $buffen ){
+			if ( !trim($buffen) )
+				continue;
+
+			if ( ($args = json_decode($buffen)) === NULL )
+				return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
 
 			// Call the intercom_event
 			if ( is_callable(array($this,'intercom_event')) )
 				call_user_func_array( array($this,'intercom_event'),$args );
 			else
 				trigger_error("Got intercom event but no intercom_event function exists!");
-		}
+        }
 	}
 
 	function parent_loop() {
@@ -73,7 +84,11 @@ class component {
 			if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
 				note(debug,$pkt);
 
-			//die("DOE");
+			// Answer to hello
+			if ( isset($pkt['type']) && $pkt['type'] == 'hello' ) {
+				$this->greetings();
+				continue;
+			}
 
 			// Event function is the default
 			$call = 'event';
@@ -83,7 +98,7 @@ class component {
 				$call = strtolower($pkt['type']);
 
 			// CMD packages, send directly to function the corresponding function, if it exists
-			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak')) )
+			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings')) )
 				$call = strtolower($pkt['cmd']);
 	
 			// Call the function
@@ -95,31 +110,48 @@ class component {
 			// If the packet is to this component, answer with result, NULL = fail = nak
 			if ( !isset($pkt['to']) || $pkt['to'] == $this->peer ) {
 				if ( $res )
-                    $this->ack($pkt['from'],$res);
+                    $this->ack($pkt,$res);
 				elseif ( $res !== null )
-                    $this->nak($pkt['from']);
+                    $this->nak($pkt);
 			}
 		}
 	}
     //can be called to acknowledge a packet to the sender.
-    function ack($to,$ret=NULL){
+    function ack($pkt,$ret=NULL){
 	    $this->broadcast(array(
-            'to' => $to,
+            'to' => $pkt['from'],
             'cmd' => 'ack',
-            'ret' => $ret
+            'ret' => $ret,
+			'pkt' => $pkt
         ));
     }
 
     function nak($to){
 	    $this->broadcast(array(
-            'to' => $to,
+            'to' => $pkt['from'],
             'cmd' => 'nak',
+			'pkt' => $pkt
         ));
     }
-    function broadcast_event($event){
+
+    function greetings(){
+		if ( !isset($this->componentclasses) ) {
+			trigger_error('No component classes defined!',E_USER_ERROR);
+			$this->componentclasses = array();
+		}
+
+		$this->broadcast(array(
+			'from' => $this->peer,
+			'cmd' => 'greetings',
+			'class' => $this->componentclasses
+		));
+    }
+
+    function broadcast_event( $event,$data=array() ){
 	    $this->broadcast(array(
             'type' => 'event',
-            'event' => $event
+            'event' => $event,
+			'data' => $data
         ));
     }
 
@@ -185,11 +217,8 @@ class component {
 			socket_close( $sockets[1] );
 
 			// Say hello to the network
-			if ( !isset($hashed) ) 
-				$this->broadcast(array(
-					'from' => $this->peer,
-					'cmd' => 'greetings'
-				));
+			if ( !isset($hashed) )
+				$this->greetings();
 
 			// Parent
 			note( debug, "Starting parent loop" );
