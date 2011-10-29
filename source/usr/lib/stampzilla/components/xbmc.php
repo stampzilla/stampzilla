@@ -49,7 +49,7 @@ class xbmc extends component {
 		return $this->state;
 	}
 	function media($pkt){
-        $this->json('VideoLibrary.GetMovies',array('fields'=>'title'),$pkt);
+        $this->json('VideoLibrary.GetMovies',array('fields'=>array('rating','length','tagline','lastplayed')),$pkt);
 	}
 
     //COMMANDS FOR CONTROLING PLAYER

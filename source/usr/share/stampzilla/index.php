@@ -216,7 +216,10 @@ $layout = array(
 							break;
 						case 'nak':
 							alert(pkt.pkt.cmd);
-							
+							break;
+						case 'bye':
+							video.removePlayer(pkt.from);
+							break;
 					}
 				}
 				// Types
@@ -254,6 +257,7 @@ $layout = array(
 				removePlayer:function(name) {
 					if ( $('videoplayer_'+name) != undefined ) {
 						$('videoplayer_'+name).dispose();
+						$$('.videoplayer_'+name).dispose();
 					}
 				},
 				setState:function(name,state) {
@@ -273,8 +277,31 @@ $layout = array(
 					list = '';
 					len = movies.length;
 					$('movie_files').innerHTML = '';
+
 					for(var a=0;a<len;a++) {
-						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');" style="background-image:url(http://loke:8080/vfs/'+movies[a].thumbnail+');" class="movie"><div>'+movies[a].label+'</div></a>';
+						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');"';
+						
+						if ( movies[a].thumbnail != undefined ) {
+							list += ' style="background-image:url(http://loke:8080/vfs/'+movies[a].thumbnail+');"';
+						}
+
+						list += ' class="movie videoplayer_'+name;
+
+						if ( movies[a].lastplayed != undefined ) {
+							list += ' played';
+						}						
+
+						list += '">';
+						for( field in movies[a] ) {
+							value = eval('movies[a].'+field);
+
+							if ( field == 'rating' )
+								value = Math.round(value);
+
+							list += '<div class="'+field+'">'+value+'</div>';
+						}
+
+						list += '</a>';
 					}
 					$('movie_files').innerHTML = list;
 				}

@@ -9,6 +9,7 @@ class component {
     private $parent = 0;
     private $child = 0;
     private $pid = 0;
+	private $died = false;
 
     function __construct() {
         $this->udp = new udp('0.0.0.0',8282);
@@ -21,7 +22,7 @@ class component {
             $data['from'] = $this->peer;
 
         $pkg = json_encode($data);
-        note(debug,$pkg);
+        //note(debug,$pkg);
         $this->udp->broadcast( $pkg );
 
         return sha1($pkg);
@@ -81,8 +82,8 @@ class component {
 			if ( !isset($pkt['from']) || (!isset($pkt['cmd'])&&!isset($pkt['type'])) )
 				continue;
 
-			if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
-				note(debug,$pkt);
+			//if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
+			//	note(debug,$pkt);
 
 			// Answer to hello
 			if ( isset($pkt['type']) && $pkt['type'] == 'hello' ) {
@@ -98,7 +99,7 @@ class component {
 				$call = strtolower($pkt['type']);
 
 			// CMD packages, send directly to function the corresponding function, if it exists
-			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings')) )
+			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings','bye')) )
 				$call = strtolower($pkt['cmd']);
 	
 			// Call the function
@@ -134,6 +135,12 @@ class component {
         ));
     }
 
+    function bye(){
+	    $this->broadcast(array(
+            'cmd' => 'bye'
+        ));
+    }
+
     function greetings(){
 		if ( !isset($this->componentclasses) ) {
 			trigger_error('No component classes defined!',E_USER_ERROR);
@@ -162,13 +169,23 @@ class component {
 	}
 
 	function kill_parent() {
-		note(warning, "Died, killing child");
-		posix_kill( $this->parent_pid, 9 );
+		note(warning, "Died in child, killing child");
+		posix_kill( $this->parent_pid, SIGINT );
 	}
 
-	function kill_child() {
-		note(warning, "Died, killing child");
-		posix_kill( $this->child_pid, 9 );
+	function kill_child()  {
+		// If we havent sent bye
+		if ( !$this->died ) {
+			// Send bye
+			$this->bye();
+
+			// Kill the child
+			note(warning, "Died in parent, killing child");
+			posix_kill( $this->child_pid, 9 );
+		}
+
+		$this->died = true;
+		die();
 	}
 
 
@@ -209,12 +226,11 @@ class component {
 			pcntl_signal( SIGALRM,array($this,'recive_intercom') );
 
 			// Make sure we dont leave any childs
+			pcntl_signal( SIGINT ,array($this,'kill_child'), true );
 			register_shutdown_function(array($this,'kill_child') );
 
 			// Save the intercom socket, and close the other
 			$this->intercom_socket = $sockets[0]; // Reader
-			//socket_set_nonblock( $this->intercom_socket );
-			socket_close( $sockets[1] );
 
 			// Say hello to the network
 			if ( !isset($hashed) )
@@ -224,6 +240,8 @@ class component {
 			note( debug, "Starting parent loop" );
 			$this->parent_loop();
         } else {
+			$this->parent_pid = posix_getppid();
+
 			// Make shure we stop the parent if child dies
 			register_shutdown_function(array($this,'kill_parent') );
 
@@ -231,7 +249,8 @@ class component {
 			$this->intercom_socket = $sockets[1]; // Writer
 			socket_close($sockets[0]);
 
-			$this->parent_pid = posix_getppid();
+			// Wait so parent have time to register SIGALRM handler
+			sleep(1);
 
 			// Child
 			note( debug, "Starting child loop" );

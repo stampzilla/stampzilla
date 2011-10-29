@@ -55,7 +55,7 @@ class errorhandler {
 				'message' => $msg,
                 'data' => $data
 			)
-		);
+		)."\n";
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8282);
 	}
 
