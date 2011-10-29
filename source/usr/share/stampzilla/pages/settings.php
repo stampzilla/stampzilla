@@ -1,3 +1,2 @@
-Yeey
-<h4>Active nodes:</h4>
+<h1>Settings</h1>
 <div id="active_nodes"></div>

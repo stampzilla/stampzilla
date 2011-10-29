@@ -14,7 +14,6 @@ class component {
     function __construct() {
         $this->udp = new udp('0.0.0.0',8282);
         $this->peer = '';
-
     }
 
     function broadcast( $data ) {
@@ -127,7 +126,7 @@ class component {
         ));
     }
 
-    function nak($to){
+    function nak($pkt){
 	    $this->broadcast(array(
             'to' => $pkt['from'],
             'cmd' => 'nak',
@@ -146,11 +145,16 @@ class component {
 			trigger_error('No component classes defined!',E_USER_ERROR);
 			$this->componentclasses = array();
 		}
+		if ( !isset($this->settings) ) {
+			trigger_error('No component settings defined!',E_USER_WARNING);
+			$this->settings = array();
+		}
 
 		$this->broadcast(array(
 			'from' => $this->peer,
 			'cmd' => 'greetings',
-			'class' => $this->componentclasses
+			'class' => $this->componentclasses,
+			'settings' => $this->settings
 		));
     }
 
@@ -169,7 +173,7 @@ class component {
 	}
 
 	function kill_parent() {
-		note(warning, "Died in child, killing child");
+		note(warning, "Died in child, killing parent");
 		posix_kill( $this->parent_pid, SIGINT );
 	}
 
@@ -227,6 +231,7 @@ class component {
 
 			// Make sure we dont leave any childs
 			pcntl_signal( SIGINT ,array($this,'kill_child'), true );
+			pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
 			register_shutdown_function(array($this,'kill_child') );
 
 			// Save the intercom socket, and close the other

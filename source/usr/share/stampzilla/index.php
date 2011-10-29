@@ -193,8 +193,8 @@ $layout = array(
 				if ( pkt.cmd != undefined ) {
 					switch( pkt.cmd ) {
 						case 'greetings':
-							$('active_nodes').innerHTML += pkt.from+" ("+pkt.class+")<br />";
-	
+							settings.addComponent(pkt.from,pkt.class,pkt.settings);
+
 							for (c in pkt.class) {
 								if ( pkt.class[c] == 'video.player' ) {
 									video.addPlayer(pkt.from);
@@ -218,6 +218,7 @@ $layout = array(
 							alert(pkt.pkt.cmd);
 							break;
 						case 'bye':
+							settings.removeComponent(pkt.from);
 							video.removePlayer(pkt.from);
 							break;
 					}
@@ -235,6 +236,17 @@ $layout = array(
 					}
 				}
 			}
+
+			settings = {
+				addComponent:function(name,classes,settings) {
+					$('active_nodes').innerHTML += '<div id="component_'+name+'"><h2>'+name+" <span>("+classes+")</span></h2>"+settings+"</div>";
+				},
+				removeComponent:function(name) {
+					if ( $('component_'+name) != undefined ) {
+						$('component_'+name).dispose();
+					}
+				}
+			};
 
 			video = {
 				players:new Array(),

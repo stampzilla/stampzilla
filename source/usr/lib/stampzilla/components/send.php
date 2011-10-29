@@ -28,6 +28,7 @@ $data = array(
 );
 
 class sender extends component{
+	protected $componentclasses = array('commander');
     function json( ) {
         global $log,$data;
 
