@@ -186,7 +186,7 @@ $layout = array(
 			}
 
 			incoming = function( json ) {
-				$('page_rooms').innerHTML += "<br><br><br>"+json;
+				//$('page_rooms').innerHTML += "<br><br><br>"+json;
 				pkt = eval('('+json+')');
 
 				// Coomands
@@ -239,7 +239,9 @@ $layout = array(
 
 			settings = {
 				addComponent:function(name,classes,settings) {
-					$('active_nodes').innerHTML += '<div id="component_'+name+'"><h2>'+name+" <span>("+classes+")</span></h2>"+settings+"</div>";
+					if ( $('component_'+name) == undefined ) {
+					    $('active_nodes').innerHTML += '<div id="component_'+name+'"><h2>'+name+" <span>("+classes+")</span></h2>"+settings+"</div>";
+                    }
 				},
 				removeComponent:function(name) {
 					if ( $('component_'+name) != undefined ) {
@@ -294,7 +296,7 @@ $layout = array(
 						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');"';
 						
 						if ( movies[a].thumbnail != undefined ) {
-							list += ' style="background-image:url(http://loke:8080/vfs/'+movies[a].thumbnail+');"';
+							list += ' style="background-image:url(http://jonaz.lan/resize.php?url=http://xbmc.lan:8080/vfs/'+movies[a].thumbnail+');"';
 						}
 
 						list += ' class="movie videoplayer_'+name;
@@ -374,6 +376,5 @@ $layout = array(
             </div>
             <div id="submenu"></div>
         </div>
-        <iframe id="iframe" style="display:none;"></iframe>
     </body>
 </html>

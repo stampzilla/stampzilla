@@ -1,9 +1,16 @@
 <?php
 
+function superdie() {
+    echo "HJÄLP!\n";
+    die();
+}
+
 class udp {
     private $sent = array();
 	private $buff = '';
 	private $log = false;
+    public $peer = '';
+    public $istcp = false;
 
     function __construct($host, $port) {
         $this->port = $port;
@@ -13,17 +20,57 @@ class udp {
         if ( !$this->r = stream_socket_server("udp://$host:$port", $errno,$errstr, STREAM_SERVER_BIND ) )
             trigger_error("Failed to create listen socket"); 
 
-		$this->log = function_exists('errorhandler::recive');
+		$this->log = method_exists('errorhandler','recive');
 
         socket_set_option( $this->s, SOL_SOCKET, SO_BROADCAST, 1 );
-		stream_set_timeout($this->r,1);
     }
 
-    function broadcast( $string ) {
-		$string .= "\n";
-        $this->sent[$string] = 1;
-		
-        socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', $this->port);
+    function broadcast( $array ) {
+        $string = json_encode($array)."\n";
+        if(strlen($string) > 8192){
+            if($array['cmd'] == 'ack'){
+                if ( !$pid = pcntl_fork() ){
+                    $this->istcp = true;
+
+                    echo "setting up tcp socket\n";
+                    $this->tcp_socket = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
+                    socket_bind($this->tcp_socket,'0.0.0.0');
+                    socket_getsockname($this->tcp_socket,$ip,$p);
+                    socket_listen($this->tcp_socket,100);
+
+                    $this->broadcast(array(
+                        'cmd'=>$array['cmd'],
+                        'from'=>$array['from'],
+                        'port' => $p,
+                        'to'=>$array['to']
+                    ));
+
+                    socket_set_nonblock($this->tcp_socket);
+                    $start = time();
+                    while( $start + 10 > time() ) {
+                        if ( $client = @socket_accept($this->tcp_socket) ) {
+                            socket_write($client,$string);
+                            socket_close($client);
+                        } else {
+                            usleep(100000);
+                        }
+                    }
+
+                    socket_close($this->tcp_socket);
+                    die();
+                } elseif ( $pid < 0 ) {
+                    note(error,"Failed to fork ($pid)");
+                }
+            }
+            else
+                trigger_error('Broadcast packet is to LARGE! (8192)',E_USER_ERROR);
+
+        }
+        else{
+            $this->sent[$string] = 1;
+            socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', $this->port);
+        }
+
     }
 
     function listen( ) {
@@ -42,15 +89,35 @@ class udp {
 				note(critical, "INVALID JSON! ".$pkt."\n");
 				return false;
 			}
-
 			// Ignore prev sent messages
-			if ( isset($this->sent[$pkt]) ) {
+			if ( isset($this->sent[$pkt]) || $json['from'] == $this->peer ) {
 				unset($this->sent[$pkt]);
 				return false;
 			}
 
-			if ( $this->log && (!isset($json['type']) || $json['type'] != 'log') )
+            if( isset($json['port']) ){
+                echo "get from tcp socket on port ".$json['port']."\n";
+
+                $peer = explode(':',$peer);
+                $fp = fsockopen($peer[0], $json['port'], $errno, $errstr, 30);
+                if (!$fp) {
+                    echo "$errstr ($errno)<br />\n";
+                } else {
+                    $string = '';
+                    while (!feof($fp)) {
+                        $string .= fgets($fp, 128);
+                    }
+                    fclose($fp);
+                    $json = json_decode($string,true);
+                    echo "got $string\n";
+                }
+
+            }
+
+			//if ( $this->log && (!isset($json['type']) || $json['type'] != 'log') ) {
+			if ( $this->log  && (!isset($json['type']) || $json['type'] != 'log') ) {
 				errorhandler::recive($json,$pkt);
+            }
 
         	return $json;
 		}

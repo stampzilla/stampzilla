@@ -2,8 +2,8 @@
 
 declare(ticks = 1);
 
-require_once("udp.php");
 require_once("errorhandler.php");
+require_once("udp.php");
 
 class component {
     private $parent = 0;
@@ -20,26 +20,31 @@ class component {
         if ( !isset($data['from']) )
             $data['from'] = $this->peer;
 
-        $pkg = json_encode($data);
-        //note(debug,$pkg);
-        $this->udp->broadcast( $pkg );
-
-        return sha1($pkg);
+        return $this->udp->broadcast( $data );
     }
 
     function intercom( ) {
 		// Send the message
-		$ic = json_encode( func_get_args() )."\n";
-		if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
-			$code = socket_last_error();
-			if ( $code == 32 )
-				die("Intercom socket broken, DIE");
-
-			return trigger_error("Failed to send intercom using IC socket: $code");
-		}
+		$ic = json_encode( func_get_args() );
 
 		// Send the alarm signal to parent
 		posix_kill( $this->parent_pid, SIGALRM );
+
+        $ic = wordwrap($ic,8192,"\n",true);
+        $parts = explode("\n",$ic);
+
+        foreach( $parts as $ic ) {
+            if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
+                $code = socket_last_error();
+                if ( $code == 32 )
+                    die("Intercom socket broken, DIE");
+
+                return trigger_error("Failed to send intercom using IC socket: $code");
+            }
+        }
+
+        socket_write( $this->intercom_socket,"\n",1 );
+
     }
 
 	function recive_intercom() {
@@ -47,10 +52,11 @@ class component {
 		if ( !pcntl_signal( SIGALRM,array($this,'recive_intercom') ) )
 			trigger_error("Failed to install signal handler");
 
-		// Read the message
-
-		$buff = '';
-		while( (@socket_recv($this->intercom_socket,$bytes, 1, MSG_DONTWAIT) ) ){
+		// Read the message, and try at least 1000 times
+        $buff = '';
+        $cnt = 0;
+		while( (@socket_recv($this->intercom_socket,$bytes, 1, MSG_DONTWAIT) ) || $cnt < 1000 ){
+            $cnt++;
 			$buff .= $bytes;
         }
 
@@ -64,9 +70,9 @@ class component {
 				return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
 
 			// Call the intercom_event
-			if ( is_callable(array($this,'intercom_event')) )
+			if ( is_callable(array($this,'intercom_event')) ) {
 				call_user_func_array( array($this,'intercom_event'),$args );
-			else
+            } else
 				trigger_error("Got intercom event but no intercom_event function exists!");
         }
 	}
@@ -173,22 +179,22 @@ class component {
 	}
 
 	function kill_parent() {
+        $this->bye();
 		note(warning, "Died in child, killing parent");
 		posix_kill( $this->parent_pid, SIGINT );
+        die();
 	}
 
 	function kill_child()  {
-		// If we havent sent bye
-		if ( !$this->died ) {
-			// Send bye
-			$this->bye();
+        if ( $this->udp->istcp )
+            return;
 
-			// Kill the child
-			note(warning, "Died in parent, killing child");
-			posix_kill( $this->child_pid, 9 );
-		}
+        // Send bye
+        $this->bye();
 
-		$this->died = true;
+        // Kill the child
+        note(warning, "Died in parent, killing child");
+        posix_kill( $this->child_pid, 9 );
 		die();
 	}
 
@@ -202,6 +208,7 @@ class component {
             $this->peer = md5(time());
             $hashed = true;
         }
+        $this->udp->peer = $this->peer;
 
         note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
 
@@ -231,7 +238,7 @@ class component {
 
 			// Make sure we dont leave any childs
 			pcntl_signal( SIGINT ,array($this,'kill_child'), true );
-			pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
+			//pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
 			register_shutdown_function(array($this,'kill_child') );
 
 			// Save the intercom socket, and close the other

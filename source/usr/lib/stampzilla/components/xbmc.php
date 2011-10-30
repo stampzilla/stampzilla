@@ -12,7 +12,7 @@ class xbmc extends component {
 	function __construct() {
         parent::__construct();
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'localhost',9090);
+        socket_connect($this->socket,'xbmc.lan',9090);
 
         $this->json('JSONRPC.Version');
         $this->json('Player.GetActivePlayers');
@@ -100,8 +100,11 @@ class xbmc extends component {
     function intercom_event($event){
 
         // Decode the incomming message
-        note(debug,"From XBMC: \n".$event);
-        $event = json_decode($event);
+        note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
+        if ( !$event = json_decode($event) ) {
+            note(error,"Syntaxerror from XBMC");
+            return;
+        }
 
         // Handle error messages
         if(isset($event->error)){
@@ -110,7 +113,6 @@ class xbmc extends component {
 
             return trigger_error($event->error->message,E_USER_WARNING);
         };
-
 
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
@@ -217,13 +219,13 @@ class xbmc extends component {
             die();
         }
         $this->buff .= $buff;
-        while ( $pos = preg_match('/\}((\n?\{)|$)/',$this->buff,$match,PREG_OFFSET_CAPTURE)){
+
+        while ( $pos = preg_match('/\}\n?(\{|$)/',$this->buff,$match,PREG_OFFSET_CAPTURE) && substr_count(substr($this->buff,0,$match[0][1]+1),'{') == substr_count(substr($this->buff,0,$match[0][1]+1),'}') ){
             $pos = $match[0][1];
             $cmd = substr($this->buff,0,$pos+1);
             $this->buff = substr($this->buff,$pos+1);
             $this->intercom($cmd);
         }
-
     }
 
 
