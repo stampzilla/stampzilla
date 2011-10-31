@@ -59,8 +59,12 @@ class errorhandler {
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8281);
 	}
 
-	static function recive( $pkt, $raw ) {
+	static function recive_pkt( $pkt, $raw ) {
     	echo "\033[1;36mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
+	}
+
+	static function send_pkt( $pkt, $raw ) {
+    	echo "\033[1;31mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
 	}
 
     static function currentTime() {

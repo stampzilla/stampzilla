@@ -4,6 +4,7 @@ declare(ticks = 1);
 
 require_once("errorhandler.php");
 require_once("udp.php");
+require_once("spyc.php");
 
 class component {
     private $parent = 0;
@@ -14,6 +15,7 @@ class component {
     function __construct() {
         $this->udp = new udp('0.0.0.0',8282);
         $this->peer = '';
+
     }
 
     function broadcast( $data ) {
@@ -77,6 +79,10 @@ class component {
         }
 	}
 
+	function kill() {
+		$this->kill_child();
+	}
+
 	function parent_loop() {
 		while(1) {
 			// Wait for a udp package
@@ -99,14 +105,16 @@ class component {
 			// Event function is the default
 			$call = 'event';
 
-			// All standard packet types, ex log,event and so on
-			if( isset($pkt['type']) && is_callable(array($this,$pkt['type'])) )
-				$call = strtolower($pkt['type']);
+			if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
+				// All standard packet types, ex log,event and so on
+				if( isset($pkt['type']) && is_callable(array($this,$pkt['type'])) )
+					$call = strtolower($pkt['type']);
 
-			// CMD packages, send directly to function the corresponding function, if it exists
-			if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings','bye')) )
-				$call = strtolower($pkt['cmd']);
-	
+				// CMD packages, send directly to function the corresponding function, if it exists
+				if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings','bye')) )
+					$call = strtolower($pkt['cmd']);
+			}
+
 			// Call the function
 			if ( is_callable(array($this,$call)) )
 				$res = $this->$call( $pkt );
@@ -114,7 +122,7 @@ class component {
 				$res = null;
 
 			// If the packet is to this component, answer with result, NULL = fail = nak
-			if ( !isset($pkt['to']) || $pkt['to'] == $this->peer ) {
+			if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
 				if ( $res )
                     $this->ack($pkt,$res);
 				elseif ( $res !== null )
@@ -132,11 +140,12 @@ class component {
         ));
     }
 
-    function nak($pkt){
+    function nak($pkt,$ret=null){
 	    $this->broadcast(array(
             'to' => $pkt['from'],
             'cmd' => 'nak',
-			'pkt' => $pkt
+			'pkt' => $pkt,
+			'ret' => $ret
         ));
     }
 
@@ -211,10 +220,12 @@ class component {
         $this->udp->peer = $this->peer;
 
         note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
+			
+		// Try to read settings
+		$this->read_settings();
 
-		if( is_callable(array($this,'startup')) ) {
+		if ( is_callable(array($this,'startup')) )
 			$this->startup();
-		}
 
 		// No childprocess needed, start the main loop directly
         if ( !$child )
@@ -269,6 +280,59 @@ class component {
 			$this->child_loop($child);
         }
     }
+
+	function save_setting($pkt) {
+		// Fail if the setting key is not defined
+		if ( !isset($this->settings[$pkt['key']]) )
+			return $this->nak($pkt,array('msg' => 'Unknown setting "'.$pkt['key'].'"','value'=>''));
+
+		$file = '/etc/stampzilla/'.$this->peer.'.yml';
+
+		// Check if file exists
+		if ( !is_file($file) )
+			return $this->nak($pkt,array('msg' => "Config file ($file) is missing!",'value'=>''));
+
+		// Try to read the settings file (yml)
+		$data = spyc_load_file($file);
+
+		$data[$pkt['key']] = $pkt['value'];
+	
+		$string = Spyc::YAMLDump($data);
+
+		if ( !file_put_contents($file,$string) )
+			return $this->nak($pkt,array('msg' => "Failed to save config file ($file)!",'value'=>''));
+	
+		$this->ack($pkt,array('value'=>$pkt['value']));
+	}
+
+	function read_settings() {
+		// Check if there are any settings defined
+		if ( !isset($this->settings) )
+			return;
+
+		$file = '/etc/stampzilla/'.$this->peer.'.yml';
+
+		// Check if file exists
+		if ( !is_file($file) )
+			return !trigger_error("Config file ($file) is missing!",E_USER_WARNING);
+
+		// Try to read the settings file (yml)
+		$data = spyc_load_file($file);
+		foreach($this->settings as $key => $line) {
+			if ( isset($data[$key]) ) {
+				$this->settings[$key]['value'] = $data[$key];
+			}
+		}
+
+		return true;
+	}
+
+	function setting($key) {
+		if ( !isset($this->settings[$key]['value']) )
+			return;
+
+		return $this->settings[$key]['value'];
+	}
 }
 
 ?>

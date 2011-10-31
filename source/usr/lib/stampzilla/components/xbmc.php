@@ -5,14 +5,36 @@ class xbmc extends component {
     private $id = 1;
     private $active_player ='';
     private $lastcmd = array();
-    protected $componentclasses = array('video.player','audio.player');
     private $commands = array(
         'play'=>'play'
-        );
-	function __construct() {
-        parent::__construct();
+    );
+
+	// INTERFACE
+    protected $componentclasses = array('video.player','audio.player');
+	protected $settings = array(
+		'hostname'=>array(
+			'type'=>'text',
+			'name' => 'Hostname',
+			'required' => true
+		),
+		'port'=>array(
+			'type'=>'text',
+			'name' => 'Web port',
+			'required' => true
+		)
+	);
+
+	function startup() {
+		$this->connect($this->setting('hostname'),9090);
+	}
+
+	function connect($host,$port) {
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'xbmc.lan',9090);
+
+		if ( !$host || !$port )
+			return;
+
+        socket_connect($this->socket,$host,$port);
 
         $this->json('JSONRPC.Version');
         $this->json('Player.GetActivePlayers');
@@ -46,7 +68,8 @@ class xbmc extends component {
     }
 
 	function state($pkt){
-		return $this->state;
+		if ( isset($this->state) )
+			return $this->state;
 	}
 	function media($pkt){
         $this->json('VideoLibrary.GetMovies',array('fields'=>array('rating','length','tagline','lastplayed')),$pkt);
@@ -147,6 +170,7 @@ class xbmc extends component {
 						$this->state = new stdClass();
 						$this->state->paused = false;
 						$this->state->playing = false;
+                        $this->broadcast_event('state',$this->state);
 					}
                         
                     break;
@@ -215,8 +239,8 @@ class xbmc extends component {
     }
 
     function readSocket(){
-        if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
-            die();
+        if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,0) ) ){
+			sleep(1); // Sleep a litte, and wait for connection
         }
         $this->buff .= $buff;
 

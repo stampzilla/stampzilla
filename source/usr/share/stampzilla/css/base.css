@@ -241,9 +241,6 @@ iframe {
 	position:relative;
 }
 
-.movie.played {
-}
-
 .movie div {
 	background:#000;
 	padding:5px;
@@ -252,6 +249,16 @@ iframe {
 
 .movie:hover {
 	opacity:1;
+}
+
+.movie .new {
+	display:block;
+	background:#0c0;
+}
+
+.movie:hover .new,
+.movie.played .new {
+	display:none;
 }
 
 .movie:hover div.label,
@@ -281,4 +288,10 @@ iframe {
 #page_settings h2 span {
 	font-size:50%;
 	font-weight:normal;
+}
+
+
+
+input.saving {
+	background:#f00;
 }

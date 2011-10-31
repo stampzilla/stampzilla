@@ -20,7 +20,7 @@ class udp {
         if ( !$this->r = stream_socket_server("udp://$host:$port", $errno,$errstr, STREAM_SERVER_BIND ) )
             trigger_error("Failed to create listen socket"); 
 
-		$this->log = method_exists('errorhandler','recive');
+		$this->log = method_exists('errorhandler','recive_pkt');
 
         socket_set_option( $this->s, SOL_SOCKET, SO_BROADCAST, 1 );
     }
@@ -32,7 +32,6 @@ class udp {
                 if ( !$pid = pcntl_fork() ){
                     $this->istcp = true;
 
-                    echo "setting up tcp socket\n";
                     $this->tcp_socket = socket_create(AF_INET, SOCK_STREAM, getprotobyname('tcp'));
                     socket_bind($this->tcp_socket,'0.0.0.0');
                     socket_getsockname($this->tcp_socket,$ip,$p);
@@ -65,8 +64,11 @@ class udp {
             else
                 trigger_error('Broadcast packet is to LARGE! (8192)',E_USER_ERROR);
 
-        }
-        else{
+        } else {
+			if ( $this->log  && (!isset($array['type']) || $array['type'] != 'log') ) {
+				errorhandler::send_pkt($array,$string);
+            }
+
             $this->sent[$string] = 1;
             socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', $this->port);
         }
@@ -116,7 +118,7 @@ class udp {
 
 			//if ( $this->log && (!isset($json['type']) || $json['type'] != 'log') ) {
 			if ( $this->log  && (!isset($json['type']) || $json['type'] != 'log') ) {
-				errorhandler::recive($json,$pkt);
+				errorhandler::recive_pkt($json,$pkt);
             }
 
         	return $json;

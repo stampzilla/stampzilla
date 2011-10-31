@@ -17,6 +17,9 @@ $layout = array(
 		),
 		'pictures' => array(
 			0 => 'Pictures'
+		),
+		'downloads' => array(
+			0 => 'Downloads'
 		)
 	),
 	'climate' => array(
@@ -65,6 +68,7 @@ $layout = array(
         <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
 
         <script type="text/javascript" src="js/mootools-core-1.3-full-compat-yc.js"></script>
+        <script type="text/javascript" src="js/swipe.js"></script>
         <link href="css/base.css" rel="stylesheet" />
         <link rel="stylesheet" media="all and (orientation:portrait)" href="css/portrait.css">
         <link rel="stylesheet" media="all and (orientation:landscape)" href="css/landscape.css">
@@ -93,6 +97,7 @@ $layout = array(
 				showPage:function(page){
 					$$('.page').removeClass('active');
 					$('page_'+page).addClass('active');
+					location.hash = page;
 				},
                 sub:function(obj) {
                     $$('#submenu a').removeClass("active");
@@ -169,14 +174,19 @@ $layout = array(
 
 			pageLoad = function() {
 				Request.prototype.addEvents({
-				'onComplete': makeFastOnClick,
+					'onComplete': makeFastOnClick,
 				});
 				setTimeout(function() { window.scrollTo(0, 1); }, 1000);
 				update();
 				makeFastOnClick();
 				$('iframe').src="incoming.php";
+				setTimeout( function() {
+					sendJSON("type=hello");
+				},100 );
 
-				sendJSON("type=hello");
+				if ( location.hash > '' ) {
+					menu.showPage(location.hash.substring(1,location.hash.length));
+				}
 			}
 
 			sendJSON = function(url) {
@@ -212,10 +222,32 @@ $layout = array(
 								case 'media':
 									video.addMedia(pkt.from,pkt.ret.result.movies);
 									break;
+								case 'save_setting':
+									settings.save_success(
+										pkt.from,
+										pkt.pkt.key,
+										pkt.ret.value
+									);
+									break;
+								default:
+									alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
+									break;
 							}
 							break;
 						case 'nak':
-							alert(pkt.pkt.cmd);
+							switch( pkt.pkt.cmd ) {
+								case 'save_setting':
+									settings.save_failed(
+										pkt.from,
+										pkt.pkt.key,
+										pkt.ret.value,
+										pkt.ret.msg
+									);
+									break;
+								default:
+									alert('NAK from '+pkt.from+' - '+pkt.pkt.cmd);
+									break;
+							}
 							break;
 						case 'bye':
 							settings.removeComponent(pkt.from);
@@ -240,14 +272,49 @@ $layout = array(
 			settings = {
 				addComponent:function(name,classes,settings) {
 					if ( $('component_'+name) == undefined ) {
-					    $('active_nodes').innerHTML += '<div id="component_'+name+'"><h2>'+name+" <span>("+classes+")</span></h2>"+settings+"</div>";
+						s = '';
+
+						for( key in settings ) {
+							row = settings[key];
+							switch( row['type'] ) {
+								case 'text':
+									value = '';
+									if ( row['value'] != undefined ) {
+										value = row['value'];
+									}
+									s += '<div><label for="'+name+'_'+key+'">'+row['name']+'</label><input type="text" id="setting_'+name+'_'+key+'" name="'+name+'_'+key+'" onChange="settings.save(this,\''+name+'\',\''+key+'\');" value="'+value+'"></div>';
+									break;
+							}
+						}
+						el = new Element('div', {id: 'component_'+name});
+						el.innerHTML = '<h2>'+name+" <span>("+classes+") <a href=\"javascript:sendJSON('to="+name+"&cmd=kill');\">[Kill]</a></span></h2>"+s;
+					    $('active_nodes').adopt(el);
                     }
 				},
 				removeComponent:function(name) {
 					if ( $('component_'+name) != undefined ) {
 						$('component_'+name).dispose();
 					}
+				},
+				save:function(obj,name,key) {
+					$(obj).addClass('saving');
+					$(obj).disabled = true;
+					sendJSON('to='+name+'&cmd=save_setting&key='+key+'&value='+obj.value);
+					return true;
+				},
+				save_success: function(name,key,value) {
+					$('setting_'+name+'_'+key).removeClass('saving');
+					$('setting_'+name+'_'+key).value = value;
+					$('setting_'+name+'_'+key).disabled = false;
+				},
+				save_failed: function(name,key,value,msg) {
+					$('setting_'+name+'_'+key).removeClass('saving');
+					$('setting_'+name+'_'+key).value = value;
+					$('setting_'+name+'_'+key).disabled = false;
+					
+					alert('Failed to save: '+msg);
 				}
+
 			};
 
 			video = {
@@ -264,9 +331,8 @@ $layout = array(
 						'</div>';
 					
 					
-					setTimeout(function(){sendJSON("to="+name+"&cmd=state");},100);
-					setTimeout(function(){sendJSON("to="+name+"&cmd=media");},1000);
-					//sendJSON("to="+name+"&cmd=list");
+					sendJSON("to="+name+"&cmd=state");
+					sendJSON("to="+name+"&cmd=media");
 				},
 				removePlayer:function(name) {
 					if ( $('videoplayer_'+name) != undefined ) {
@@ -296,7 +362,7 @@ $layout = array(
 						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');"';
 						
 						if ( movies[a].thumbnail != undefined ) {
-							list += ' style="background-image:url(http://jonaz.lan/resize.php?url=http://xbmc.lan:8080/vfs/'+movies[a].thumbnail+');"';
+							list += ' style="background-image:url(resize.php?url=http://loke.local:8080/vfs/'+movies[a].thumbnail+');"';
 						}
 
 						list += ' class="movie videoplayer_'+name;
@@ -305,7 +371,7 @@ $layout = array(
 							list += ' played';
 						}						
 
-						list += '">';
+						list += '"><div class="new">New</div>';
 						for( field in movies[a] ) {
 							value = eval('movies[a].'+field);
 
