@@ -15,4 +15,9 @@ ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
 
 update-rc.d stampzilla defaults
 
-aptitude install php5-cli
+aptitude install php5-cli php5-gd
+
+mkdir /etc/stampzilla/
+
+confd=`php --ini|grep 'additional'|awk '{print $7;}'`
+echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/stampzilla:/etc/stampzilla/" > "$confd/stampzilla.ini"

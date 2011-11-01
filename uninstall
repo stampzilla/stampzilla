@@ -6,3 +6,6 @@ rm /usr/share/man/man1/stampzilla.1.gz
 rm /etc/init.d/stampzilla
 
 update-rc.d stampzilla remove
+
+confd=`php --ini|grep 'additional'|awk '{print $7;}'`
+rm $confd
