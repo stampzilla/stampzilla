@@ -4,20 +4,41 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
-aptitude remove stampzilla
+if [ `command -v aptitude` ]; then
+    aptitude remove stampzilla
+fi
 
 ln -sf `pwd`/source/usr/bin/stampzilla /usr/bin/stampzilla
 ln -sf `pwd`/source/usr/share/stampzilla/ /usr/share/
 ln -sf `pwd`/source/usr/lib/stampzilla/ /usr/lib/
 ln -sf `pwd`/source/usr/share/man/man1/stampzilla.1.gz /usr/share/man/man1/stampzilla.1.gz
 ln -sf `pwd`/source/usr/share/doc/stampzilla/ /usr/share/doc/
-ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
 
-update-rc.d stampzilla defaults
+if [ `command -v update-rc.d` ]; then
+    ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
+    update-rc.d stampzilla defaults
+fi
 
-aptitude install php5-cli php5-gd
+if [ `command -v pacman` ]; then
+    if [ ! `command -v php` ]; then
+        pacman -S php php-gd
+    fi
 
-mkdir /etc/stampzilla/
+    echo "Dont forget to activate the following modules in /etc/php/php.ini:"
+    echo "  extension=json.so"
+    echo "  extension=gd.so"
+    echo "  extension=openssl.so"
+    echo "  extension=posix.so"
+    echo "  extension=sockets.so"
+fi
+
+if [ `command -v aptitude` ]; then
+    aptitude install php5-cli php5-gd
+fi
+
+if [ ! -d "/etc/stampzilla" ]; then
+    mkdir /etc/stampzilla/
+fi
 
 confd=`php --ini|grep 'additional'|awk '{print $7;}'`
 echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/" > "$confd/stampzilla.ini"
