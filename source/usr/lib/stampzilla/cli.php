@@ -1,7 +1,7 @@
 #!/usr/bin/php -q
 <?php
 
-define("VERSION",'0.0.4');
+define("VERSION",'0.0.5');
 
 require "lib/functions.php";
 
