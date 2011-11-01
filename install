@@ -7,10 +7,10 @@ fi
 aptitude remove stampzilla
 
 ln -sf `pwd`/source/usr/bin/stampzilla /usr/bin/stampzilla
-ln -sf `pwd`/source/usr/share/stampzilla /usr/share/stampzilla
-ln -sf `pwd`/source/usr/lib/stampzilla /usr/lib/stampzilla
+ln -sf `pwd`/source/usr/share/stampzilla/ /usr/share/
+ln -sf `pwd`/source/usr/lib/stampzilla/ /usr/lib/
 ln -sf `pwd`/source/usr/share/man/man1/stampzilla.1.gz /usr/share/man/man1/stampzilla.1.gz
-ln -sf `pwd`/source/usr/share/doc/stampzilla /usr/share/doc/stampzilla
+ln -sf `pwd`/source/usr/share/doc/stampzilla/ /usr/share/doc/
 ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
 
 update-rc.d stampzilla defaults
@@ -20,4 +20,4 @@ aptitude install php5-cli php5-gd
 mkdir /etc/stampzilla/
 
 confd=`php --ini|grep 'additional'|awk '{print $7;}'`
-echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/stampzilla:/etc/stampzilla/" > "$confd/stampzilla.ini"
+echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/" > "$confd/stampzilla.ini"

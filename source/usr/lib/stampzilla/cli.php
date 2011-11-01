@@ -144,6 +144,9 @@ function command($cmd,$pwd = '') {
 				return false;
 			//exec("gzip --best $tmp/usr/share/doc/stampzilla/changelog");
 
+			if ( !cpr('/usr/share/stampzilla',$tmp) ) 
+				return false;
+
 			if ( !cpr('/usr/lib/stampzilla/',$tmp) ) 
 				return false;
 			if ( !chmod("$tmp/usr/lib/stampzilla/cli.php",0755) )
@@ -235,7 +238,6 @@ function command($cmd,$pwd = '') {
 			// Clean up
 			//rrmdir("$tmp");
 
-
 			passthru("dpkg --info stampzilla_".VERSION."_all.deb");
         	break;
         case 'send':
@@ -260,7 +262,22 @@ function command($cmd,$pwd = '') {
 				echo format($pkt['level'],$pkt['message']);
 			}
 
-				
+		case 'changelog':
+            $log = file_get_contents('https://api.github.com/networks/stampzilla/stampzilla/events');
+            $log = json_decode($log,true);
+            //print_r($log);
+            krsort($log);
+            foreach($log as $line) {
+                if ( isset($line['payload']['commits']) ) {
+                    foreach($line['payload']['commits'] as $com) {
+                        echo date('Y-m-d H:i:s',strtotime($line['created_at']))." (".$com['author']['name'].")\n";
+                        $m = explode("\n",$com['message']);
+                        foreach($m as $l)
+                            echo "\t".$l."\n";
+                    }
+                }
+            }
+            break;
         default:
             return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
     }
@@ -311,11 +328,13 @@ function cpr( $from, $to ) {
 	$from = rtrim($from,'/');
 	$to = rtrim($to,'/');
 
-    if ( is_link($from) )
+echo "$from\n";
+
+    /*if ( is_link($from) )
         $from = readlink($from);
 
     if ( is_link($to) )
-        $to = readlink($to);
+        $to = readlink($to);*/
 
 	if ( is_dir($from) ) {
 		$content = scandir($from);
@@ -325,7 +344,7 @@ function cpr( $from, $to ) {
 
 			cpr($from."/$line",$to);
 		}
-	} else {
+	} elseif( is_file($from) ) {
 		// Check dirs, and create them
 		$target = $to;
 		$dirs = explode("/",dirname(ltrim($from,'/')));
@@ -338,7 +357,9 @@ function cpr( $from, $to ) {
 		}
 		if ( !copy($from,$target.'/'.basename($from)) )
 			return trigger_error("Failed to copy file ($from -> $target)",E_USER_ERROR);
-	}
+	} else {
+        return trigger_error("Dir/file $from do not exist",E_USER_ERROR);
+    }
 
 	return true;
 }
