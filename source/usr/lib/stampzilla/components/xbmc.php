@@ -143,10 +143,6 @@ class xbmc extends component {
             $var = $this->lastcmd[$event->id]['var'];
             unset($this->lastcmd[$event->id]);
 
-
-            if ( isset($var['to']) )
-                $this->ack($var,$event);
-
             switch($cmd['method']) {
                 case 'JSONRPC.Version':
                     $this->api_version = $event->result->version;
@@ -174,8 +170,15 @@ class xbmc extends component {
 					}
                         
                     break;
-				case 'VideoLibrary.GetMovies':
-					break;
+                case 'VideoLibrary.GetMovies':
+
+                    $host = $this->setting('hostname');
+                    $port = $this->setting('port');
+
+                    foreach( $event->result->movies as $key => $line ) {
+                        $event->result->movies[$key]->thumbnail = 'http://'.$host.':'.$port.'/vfs/'.$line->thumbnail;
+                    }
+                    break;
                 case 'VideoPlayer.State':
                 case 'PicturePlayer.State':
                 case 'AudioPlayer.State':
@@ -186,6 +189,9 @@ class xbmc extends component {
                         $this->broadcast_event('state',$this->state);
                     break;
             }
+
+            if ( isset($var['to']) )
+                $this->ack($var,$event);
         } else {
         // Handle broadcasts
             if(isset($event->method)){
