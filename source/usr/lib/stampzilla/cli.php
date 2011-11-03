@@ -88,9 +88,10 @@ function command($cmd,$pwd = '') {
         case 'stop':
             $p = $arg;
             unset($p[0]);
+
             if ( ($active = listActive()) ) {
                 foreach( $active as $line ) {
-                    if ( !isset($p[1]) || trim(implode($p,' ')) == trim(substr($line['file'],4)) ) {
+                    if ( !isset($p[1]) || rtrim($p[1],'.php').'.php' == trim(substr(ltrim($line['file'],'\_'),4)) ) {
                         echo "Kill pid: {$line['pid']}({$line['file']})\n";
                         exec("kill -9 ".$line['pid'],$ret);
                         foreach( $ret as $line )
@@ -103,12 +104,13 @@ function command($cmd,$pwd = '') {
         case 'start':
             unset($arg[0]);
             if ( isset($arg[1]) ) {
+                $arg[1] = rtrim($arg[1],".php").".php";
                 echo "Starting ".$arg[1]."\n";
                 exec('nohup php '.implode($arg,' ').'> /dev/null&',$ret);
                 foreach( $ret as $line )
                     echo "   ".$line."\n";
             } else {
-                $c = explode("\n",file_get_contents('/etc/stampzilla'));
+                $c = explode("\n",file_get_contents('/etc/stampzilla/stampzilla.list'));
                 foreach( $c as $key => $line ) {
                     if ( !$line )
                         continue;

@@ -14,6 +14,7 @@ function getPwdX( $pid ) {
 function listActive() {/*{{{*/
     // USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
     exec("ps auxf|grep php",$out);
+
     $active = array();
     foreach ( $out as $line ) {
         //if ( substr($line,65,4) == 'php ' ) {
@@ -21,7 +22,7 @@ function listActive() {/*{{{*/
             $pid = trim(substr($line,9,7));
 
             // Ignore self
-            if ( $pid = getmypid() )
+            if ( $pid == getmypid() )
                 continue;
 
 	    	$pwd = getPwdX($pid);
