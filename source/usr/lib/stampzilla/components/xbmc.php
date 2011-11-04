@@ -262,6 +262,6 @@ class xbmc extends component {
 }
 
 $xbmc = new xbmc();
-$xbmc->start('xbmc-test','readSocket');
+$xbmc->start('xbmc','readSocket');
 
 ?>

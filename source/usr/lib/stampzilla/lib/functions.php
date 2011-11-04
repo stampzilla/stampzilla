@@ -89,4 +89,85 @@ function arguments($args ) {
     return $ret;
 }
 
+function md5sums( $path, $hash=true ,$data = array(), $root = '' ) {
+	if ( !$root )
+		$root = $path;
+
+	if( is_dir($path) ) {
+		$content = scandir($path);
+		foreach($content as $key => $line) {
+			if ( substr($line,0,1) == '.' )
+				continue;
+
+			$data = md5sums($path."/$line",$hash,$data,$root);
+		}
+	} else {
+		if ( $hash ) 
+			$data[] = array(
+				md5(file_get_contents($path)),
+				substr($path,strlen($root)+1),
+			);
+		else 
+			$data[] = '/etc/'.substr($path,strlen($root)+1);
+	}
+
+	return $data;
+}
+
+// Remove a directory recursive
+function rrmdir($dir) {
+	if (is_dir($dir)) {
+     	$objects = scandir($dir);
+     	foreach ($objects as $object) {
+       		if ($object != "." && $object != "..") {
+         		if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+       		}
+     	}
+     	reset($objects);
+    	rmdir($dir);
+   	}
+} 
+
+// Copy recursive to a dir and create target dir if it dont exists
+function cpr( $from, $to ) {
+
+	$from = rtrim($from,'/');
+	$to = rtrim($to,'/');
+
+    echo "$from\n";
+
+    /*if ( is_link($from) )
+        $from = readlink($from);
+
+    if ( is_link($to) )
+        $to = readlink($to);*/
+
+	if ( is_dir($from) ) {
+		$content = scandir($from);
+		foreach($content as $key => $line) {
+			if ( substr($line,0,1) == '.' )
+				continue;
+
+			cpr($from."/$line",$to);
+		}
+	} elseif( is_file($from) ) {
+		// Check dirs, and create them
+		$target = $to;
+		$dirs = explode("/",dirname(ltrim($from,'/')));
+		foreach($dirs as $key => $line) {
+			$target .= "/$line";
+			if ( !is_dir($target) )
+				if ( !mkdir($target) )
+					return trigger_error("Failed creating dir ($target)",E_USER_ERROR);
+
+		}
+		if ( !copy($from,$target.'/'.basename($from)) )
+			return trigger_error("Failed to copy file ($from -> $target)",E_USER_ERROR);
+	} else {
+        return trigger_error("Dir/file $from do not exist",E_USER_ERROR);
+    }
+
+	return true;
+}
+
 ?>
