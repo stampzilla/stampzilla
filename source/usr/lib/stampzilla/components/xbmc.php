@@ -28,6 +28,9 @@ class xbmc extends component {
 		$this->connect($this->setting('hostname'),9090);
 	}
 
+    function setting_saved($key, $value) {
+    }
+
 	function connect($host,$port) {
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
 
@@ -143,10 +146,6 @@ class xbmc extends component {
             $var = $this->lastcmd[$event->id]['var'];
             unset($this->lastcmd[$event->id]);
 
-
-            if ( isset($var['to']) )
-                $this->ack($var,$event);
-
             switch($cmd['method']) {
                 case 'JSONRPC.Version':
                     $this->api_version = $event->result->version;
@@ -175,6 +174,9 @@ class xbmc extends component {
                         
                     break;
 				case 'VideoLibrary.GetMovies':
+                    foreach($event['result'] as $key => $line) {
+                    
+                    }
 					break;
                 case 'VideoPlayer.State':
                 case 'PicturePlayer.State':
@@ -186,6 +188,9 @@ class xbmc extends component {
                         $this->broadcast_event('state',$this->state);
                     break;
             }
+
+            if ( isset($var['to']) )
+                $this->ack($var,$event);
         } else {
         // Handle broadcasts
             if(isset($event->method)){

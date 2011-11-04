@@ -302,6 +302,11 @@ class component {
 		if ( !file_put_contents($file,$string) )
 			return $this->nak($pkt,array('msg' => "Failed to save config file ($file)!",'value'=>''));
 	
+        if ( is_callable(array($this,'setting_saved')) ) {
+            $this->setting_saved($pkt['key'],$pkt['value']);
+        }
+
+        note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
 		$this->ack($pkt,array('value'=>$pkt['value']));
 	}
 
