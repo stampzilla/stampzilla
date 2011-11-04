@@ -4,41 +4,88 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
+echo ""
+
 if [ `command -v aptitude` ]; then
-    aptitude remove stampzilla
+    echo -n "Checking if stampzilla is installed with dpkg...";
+    if [ `dpkg -l |grep -q stampzilla` ]; then
+        echo "yes"
+        echo " - Removing previus installed package"
+        aptitude remove stampzilla
+    else
+        echo "no"
+    fi
 fi
 
+echo -n "Creating symbolic links..."
 ln -sf `pwd`/source/usr/bin/stampzilla /usr/bin/stampzilla
 ln -sf `pwd`/source/usr/share/stampzilla/ /usr/share/
 ln -sf `pwd`/source/usr/lib/stampzilla/ /usr/lib/
 ln -sf `pwd`/source/usr/share/man/man1/stampzilla.1.gz /usr/share/man/man1/stampzilla.1.gz
 ln -sf `pwd`/source/usr/share/doc/stampzilla/ /usr/share/doc/
+echo "done"
 
 if [ `command -v update-rc.d` ]; then
+    echo -n "Installing startup script (/etc/init.d/stampzilla)..."
     ln -sf `pwd`/source/etc/init.d/stampzilla /etc/init.d/stampzilla
-    update-rc.d stampzilla defaults
+    update-rc.d stampzilla defaults 1>/dev/null
+    echo "done"
 fi
 
 if [ `command -v pacman` ]; then
+    echo -n "Checking if php and php-gd is installed..."
     if [ ! `command -v php` ]; then
+        echo "no"
+        echo "Installing php and php-gd with packman"
         pacman -S php php-gd
+    else
+        echo "yes"
     fi
 
+    echo ""
     echo "Dont forget to activate the following modules in /etc/php/php.ini:"
     echo "  extension=json.so"
     echo "  extension=gd.so"
     echo "  extension=openssl.so"
     echo "  extension=posix.so"
     echo "  extension=sockets.so"
+    echo ""
 fi
 
 if [ `command -v aptitude` ]; then
-    aptitude install php5-cli php5-gd
+    dpkg -l |grep php5-gd|grep -q "i  "
+    cli=$?
+    dpkg -l |grep php5-cli|grep -q "i  "
+    gd=$?
+
+    echo "Checking if php5-cli installed... $cli"
+    echo "Checking if php5-gd is installed... $gd"
+
+    if [[ $cli -eq 1 || $gd -eq 1 ]]; then
+        echo "Installing php5-cli and php5-gd with aptitude"
+        aptitude install php5-cli php5-gd
+    fi
 fi
 
-if [ ! -d "/etc/stampzilla" ]; then
+echo -n "Checking config dir (/etc/stampzilla/)..."
+if [ ! -d /etc/stampzilla/ ]; then
+    echo "missing, creating dir"
     mkdir /etc/stampzilla/
+else
+    echo "exists"
 fi
 
+echo -n "Checking php config dir..."
 confd=`php --ini|grep 'additional'|awk '{print $7;}'`
-echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/" > "$confd/stampzilla.ini"
+if [ ! -d $confd ]; then
+    echo "missing, creating dir ($confd)"
+    mkdir $confd
+else
+    echo "exists"
+fi
+
+echo "Writing $confd/stampzilla.ini"
+echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/:/usr/lib/stampzilla" > "$confd/stampzilla.ini"
+
+echo ""
+echo "All done, have fun!";

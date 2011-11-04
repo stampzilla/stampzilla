@@ -173,11 +173,15 @@ class xbmc extends component {
 					}
                         
                     break;
-				case 'VideoLibrary.GetMovies':
-                    foreach($event['result'] as $key => $line) {
-                    
+                case 'VideoLibrary.GetMovies':
+
+                    $host = $this->setting('hostname');
+                    $port = $this->setting('port');
+
+                    foreach( $event->result->movies as $key => $line ) {
+                        $event->result->movies[$key]->thumbnail = 'http://'.$host.':'.$port.'/vfs/'.$line->thumbnail;
                     }
-					break;
+                    break;
                 case 'VideoPlayer.State':
                 case 'PicturePlayer.State':
                 case 'AudioPlayer.State':
@@ -261,6 +265,6 @@ class xbmc extends component {
 }
 
 $xbmc = new xbmc();
-$xbmc->start('xbmc-test','readSocket');
+$xbmc->start('xbmc','readSocket');
 
 ?>

@@ -228,20 +228,21 @@ class component {
 			$this->startup();
 
 		// No childprocess needed, start the main loop directly
-        if ( !$child )
-			return $this->parent_loop();
-		
-		// Create a intercom socket between parent and child process
-		$sockets = array();
-		if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
-			return trigger_error("Failed to create socket pair: ".socket_strerror(socket_last_error()));
-		}
+        if ( !$child ) {
+            $this->child_pid = 1;
+        } else {
+            // Create a intercom socket between parent and child process
+            $sockets = array();
+            if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
+                return trigger_error("Failed to create socket pair: ".socket_strerror(socket_last_error()));
+            }
 
-		// Fork a child process
-		if ( ($this->child_pid = pcntl_fork()) == -1 )
-            return trigger_error('Failed to fork');
-		
-		note(debug,'Forked process with pid:'.$this->child_pid);
+            // Fork a child process
+            if ( ($this->child_pid = pcntl_fork()) == -1 )
+                return trigger_error('Failed to fork');
+
+            note(debug,'Forked process with pid:'.$this->child_pid);
+        }
 
         if ( $this->child_pid ) {
 			// Add an signal handler so the child can notify the parent when there are new intercom data

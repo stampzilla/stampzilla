@@ -1,7 +1,7 @@
 #!/usr/bin/php -q
 <?php
 
-define("VERSION",'0.0.4');
+define("VERSION",'0.0.5');
 
 require "lib/functions.php";
 
@@ -30,10 +30,10 @@ function command($cmd,$pwd = '') {
 
     switch($arg[0]) {
         case '--help':
-        case 'help':
+        case 'help':/*{{{*/
             passthru("man stampzilla|col");
-            break;
-        case 'list': 
+            break;/*}}}*/
+        case 'list': /*{{{*/
             echo "Active processes:\n";
             if ( ($active = listActive()) ) {
                 echo "PID     CPU  MEM  TIME   PROCESS\n";
@@ -45,23 +45,23 @@ function command($cmd,$pwd = '') {
                     echo $line['file']."\n";
                 }
             }
-            break;
-        case 'simplelist': 
+            break;/*}}}*/
+        case 'simplelist': /*{{{*/
             if ( ($active = listActive()) ) {
                 foreach( $active as $line ) {
                     echo $line['file']."\n";
                 }
             }
-            break;
-        case 'debug':
+            break;/*}}}*/
+        case 'debug':/*{{{*/
             echo "Not available yet!\n";
             break;
-
-        case 'show':
-            echo "/etc/stampzilla:\n";
-            echo file_get_contents('/etc/stampzilla');
-            break;
-        case 'add':
+/*}}}*/
+        case 'show':/*{{{*/
+            echo "/etc/stampzilla/autostart.list:\n";
+            echo file_get_contents('/etc/stampzilla/autostart.list');
+            break;/*}}}*/
+        case 'add':/*{{{*/
             if ( !isset($arg[1]) ) {
                 echo "Wrong syntax: add <process name> <args>\n";
                 break;
@@ -69,57 +69,80 @@ function command($cmd,$pwd = '') {
 
             $arg = array_slice($arg,1);
 
-            file_put_contents('startup.list',implode($arg," ")."\n",FILE_APPEND);
-            break;
-        case 'remove':
+            file_put_contents('/etc/stampzilla/autostart.list',implode($arg," ")."\n",FILE_APPEND);
+            break;/*}}}*/
+        case 'remove':/*{{{*/
             if ( !isset($arg[1]) ) {
                 echo "Wrong syntax: remove <process name>\n";
                 break;
             }
 
-            $c = explode("\n",file_get_contents('startup.list'));
+            $c = explode("\n",file_get_contents('/etc/stampzilla/autostart.list'));
             foreach( $c as $key => $line ) {
                 if ( substr($line,0,strlen($arg[1])) == $arg[1] )
                     unset($c[$key]);
             }
-            file_put_contents('startup.list',implode($c,"\n"));
-            break;
+            file_put_contents('/etc/stampzilla/autostart.list',implode($c,"\n"));
+            break;/*}}}*/
         case 'restart':
-        case 'stop':
+        case 'stop':/*{{{*/
             $p = $arg;
             unset($p[0]);
+
             if ( ($active = listActive()) ) {
+                require_once('../lib/udp.php');
+                $udp = new udp('0.0.0.0',8282);
                 foreach( $active as $line ) {
-                    if ( !isset($p[1]) || trim(implode($p,' ')) == trim(substr($line['file'],4)) ) {
-                        echo "Kill pid: {$line['pid']}({$line['file']})\n";
-                        exec("kill -9 ".$line['pid'],$ret);
-                        foreach( $ret as $line )
-                            echo "   ".$line."\n";
+                    $node = str_replace('.php','',trim(substr(ltrim($line['file'],'\_'),4)));
+                    if ( !isset($p[1]) || str_replace('.php','',$p[1]) == $node ) {
+                        echo "Sending kill signal to {$node}\n";
+                        $udp->broadcast(array(
+                            'to'=>$node,
+                            'cmd'=>'kill',
+                            'from'=>'stampzilla'
+                        ));
                     }
                 }
             }
+
+            $stop = time()+2;
+            while ( $active = listActive() && time()<$stop ) {
+                usleep(1000000);
+            }
+
+            if ( ($active = listActive()) ) {
+                foreach( $active as $line ) {
+                    $node = str_replace('.php','',trim(substr(ltrim($line['file'],'\_'),4)));
+                    if ( !isset($p[1]) || str_replace('.php','',$p[1]) == $node ) {
+                        echo "Force kill pid: {$line['pid']} ({$line['file']})\n";
+                        exec("kill -9 ".$line['pid'],$ret);
+                    }
+                }
+            }
+
             if ( $arg[0] != 'restart' )
-                break;
-        case 'start':
+                break;/*}}}*/
+        case 'start':/*{{{*/
             unset($arg[0]);
             if ( isset($arg[1]) ) {
+                $arg[1] = str_replace(".php",'',$arg[1]).".php";
                 echo "Starting ".$arg[1]."\n";
                 exec('nohup php '.implode($arg,' ').'> /dev/null&',$ret);
-                foreach( $ret as $line )
-                    echo "   ".$line."\n";
+                //foreach( $ret as $line )
+                //    echo "   ".$line."\n";
             } else {
-                $c = explode("\n",file_get_contents('/etc/stampzilla'));
+                $c = explode("\n",file_get_contents('/etc/stampzilla/autostart.list'));
                 foreach( $c as $key => $line ) {
                     if ( !$line )
                         continue;
                     echo "Starting ".$line."\n";
-                    exec('nohup php '.$line.'> /dev/null&',$ret);
-                    foreach( $ret as $line )
-                        echo "   ".$line."\n";
+                    exec('nohup php '.str_replace(".php",'',$line).'.php> /dev/null&',$ret);
+                 //   foreach( $ret as $line )
+                 //       echo "   ".$line."\n";
                 }
             }
-			break;
-		case 'make':
+			break;/*}}}*/
+		case 'make':/*{{{*/
 			echo "Collecting files...";
 			echo getcwd()."\n";
 			$tmp = '/tmp/stampzilla';
@@ -138,11 +161,9 @@ function command($cmd,$pwd = '') {
 			// Copy all files
 			if ( !cpr('/usr/share/man/man1/stampzilla.1.gz',$tmp) ) 
 				return false;
-			//exec("gzip --best $tmp/usr/share/man/man1/stampzilla.1.gz");
 
 			if ( !cpr('/usr/share/doc/stampzilla',$tmp) ) 
 				return false;
-			//exec("gzip --best $tmp/usr/share/doc/stampzilla/changelog");
 
 			if ( !cpr('/usr/share/stampzilla',$tmp) ) 
 				return false;
@@ -236,16 +257,16 @@ function command($cmd,$pwd = '') {
 				echo "OK\n\nGreat success!\n";
 
 			// Clean up
-			//rrmdir("$tmp");
+			rrmdir("$tmp");
 
-			passthru("dpkg --info stampzilla_".VERSION."_all.deb");
-        	break;
-        case 'send':
+			//passthru("dpkg --info stampzilla_".VERSION."_all.deb");
+        	break;/*}}}*/
+        case 'send':/*{{{*/
             unset($arg[0]);
             print_r($arg);
             passthru("php send.php \"".implode($arg,"\" \"").'"');
-            break;
-		case 'log':
+            break;/*}}}*/
+		case 'log':/*{{{*/
 			require_once("lib/udp.php");
 			require_once("lib/errorhandler.php");
 
@@ -261,8 +282,8 @@ function command($cmd,$pwd = '') {
 				// Format message
 				echo format($pkt['level'],$pkt['message']);
 			}
-
-		case 'changelog':
+/*}}}*/
+		case 'changelog':/*{{{*/
             $log = file_get_contents('https://api.github.com/networks/stampzilla/stampzilla/events');
             $log = json_decode($log,true);
             //print_r($log);
@@ -277,91 +298,10 @@ function command($cmd,$pwd = '') {
                     }
                 }
             }
-            break;
+            break;/*}}}*/
         default:
             return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
     }
-}
-
-function md5sums( $path, $hash=true ,$data = array(), $root = '' ) {
-	if ( !$root )
-		$root = $path;
-
-	if( is_dir($path) ) {
-		$content = scandir($path);
-		foreach($content as $key => $line) {
-			if ( substr($line,0,1) == '.' )
-				continue;
-
-			$data = md5sums($path."/$line",$hash,$data,$root);
-		}
-	} else {
-		if ( $hash ) 
-			$data[] = array(
-				md5(file_get_contents($path)),
-				substr($path,strlen($root)+1),
-			);
-		else 
-			$data[] = '/etc/'.substr($path,strlen($root)+1);
-	}
-
-	return $data;
-}
-
-// Remove a directory recursive
-function rrmdir($dir) {
-	if (is_dir($dir)) {
-     	$objects = scandir($dir);
-     	foreach ($objects as $object) {
-       		if ($object != "." && $object != "..") {
-         		if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
-       		}
-     	}
-     	reset($objects);
-    	rmdir($dir);
-   	}
-} 
-
-// Copy recursive to a dir and create target dir if it dont exists
-function cpr( $from, $to ) {
-
-	$from = rtrim($from,'/');
-	$to = rtrim($to,'/');
-
-echo "$from\n";
-
-    /*if ( is_link($from) )
-        $from = readlink($from);
-
-    if ( is_link($to) )
-        $to = readlink($to);*/
-
-	if ( is_dir($from) ) {
-		$content = scandir($from);
-		foreach($content as $key => $line) {
-			if ( substr($line,0,1) == '.' )
-				continue;
-
-			cpr($from."/$line",$to);
-		}
-	} elseif( is_file($from) ) {
-		// Check dirs, and create them
-		$target = $to;
-		$dirs = explode("/",dirname(ltrim($from,'/')));
-		foreach($dirs as $key => $line) {
-			$target .= "/$line";
-			if ( !is_dir($target) )
-				if ( !mkdir($target) )
-					return trigger_error("Failed creating dir ($target)",E_USER_ERROR);
-
-		}
-		if ( !copy($from,$target.'/'.basename($from)) )
-			return trigger_error("Failed to copy file ($from -> $target)",E_USER_ERROR);
-	} else {
-        return trigger_error("Dir/file $from do not exist",E_USER_ERROR);
-    }
-
-	return true;
 }
 
 ?>

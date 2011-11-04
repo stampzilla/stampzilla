@@ -11,4 +11,4 @@ if [ `command -v update-rc.d` ]; then
 fi
 
 confd=`php --ini|grep 'additional'|awk '{print $7;}'`
-rm $confd
+rm "$confd/stampzilla.ini"

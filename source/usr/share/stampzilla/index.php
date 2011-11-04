@@ -230,7 +230,7 @@ $layout = array(
 									);
 									break;
 								default:
-									alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
+									//alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
 									break;
 							}
 							break;
@@ -362,7 +362,7 @@ $layout = array(
 						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');"';
 						
 						if ( movies[a].thumbnail != undefined ) {
-							list += ' style="background-image:url(resize.php?url=http://loke.local:8080/vfs/'+movies[a].thumbnail+');"';
+							list += ' style="background-image:url(resize.php?url='+movies[a].thumbnail+');"';
 						}
 
 						list += ' class="movie videoplayer_'+name;
