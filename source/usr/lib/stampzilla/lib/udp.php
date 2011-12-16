@@ -12,12 +12,13 @@ class udp {
     public $peer = '';
     public $istcp = false;
 
-    function __construct($host, $port) {
+    function __construct($listen, $broadcast, $port) {
         $this->port = $port;
+        $this->broadcast_addr = $broadcast;
         if ( !$this->s = socket_create( AF_INET, SOCK_DGRAM, SOL_UDP ) )
             trigger_error("Failed to create send socket");
 
-        if ( !$this->r = stream_socket_server("udp://$host:$port", $errno,$errstr, STREAM_SERVER_BIND ) )
+        if ( !$this->r = stream_socket_server("udp://$listen:$port", $errno,$errstr, STREAM_SERVER_BIND ) )
             trigger_error("Failed to create listen socket"); 
 
 		$this->log = method_exists('errorhandler','recive_pkt');
@@ -70,7 +71,7 @@ class udp {
             }
 
             $this->sent[$string] = 1;
-            socket_sendto($this->s, $string, strlen($string), 0 ,'255.255.255.255', $this->port);
+            socket_sendto($this->s, $string, strlen($string), 0 ,$this->broadcast_addr, $this->port);
         }
 
     }

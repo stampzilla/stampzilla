@@ -13,7 +13,18 @@ class component {
 	private $died = false;
 
     function __construct() {
-        $this->udp = new udp('0.0.0.0',8282);
+        // Load network config
+
+        $this->network = spyc_load_file('/etc/stampzilla/network.yml');
+
+        if(!isset($this->network['listen']) )
+            $this->network['listen'] = '0.0.0.0';
+        if(!isset($this->network['broadcast']) )
+            $this->network['broadcast'] = '255.255.255.255';
+        if(!isset($this->network['port']) )
+            $this->network['port'] = '8282';
+
+        $this->udp = new udp($this->network['listen'],$this->network['broadcast'],$this->network['port']);
         $this->peer = '';
 
     }
