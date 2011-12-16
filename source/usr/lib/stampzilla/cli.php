@@ -270,7 +270,7 @@ function command($cmd,$pwd = '') {
 			require_once("lib/udp.php");
 			require_once("lib/errorhandler.php");
 
-			$udp = new udp('0.0.0.0',8281);
+			$udp = new udp('0.0.0.0','255.255.255.255',8281);
 			while(1) {
 				if ( !$pkt = $udp->listen() )
 					continue;

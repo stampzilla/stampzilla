@@ -12,7 +12,7 @@ $logger = new logger();
 class logger {
 	function __construct() {
 		// Create a new udp socket
-		$this->udp = new udp('0.0.0.0',8282);
+		$this->udp = new udp('0.0.0.0','255.255.255.255',8282);
 
 		while(1) {
 			$this->parent++;
