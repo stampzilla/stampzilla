@@ -168,11 +168,11 @@ class component {
 
     function greetings(){
 		if ( !isset($this->componentclasses) ) {
-			trigger_error('No component classes defined!',E_USER_ERROR);
+			note(warning,'No component classes defined!');
 			$this->componentclasses = array();
 		}
 		if ( !isset($this->settings) ) {
-			trigger_error('No component settings defined!',E_USER_WARNING);
+			note(warning,'No component settings defined!');
 			$this->settings = array();
 		}
 

@@ -10,7 +10,7 @@ $pwd = getcwd();
 chdir('/usr/lib/stampzilla/components/');
 
 if ( isset($_SERVER["argv"][1]) ) {
-    command($args['arguments'],$pwd);
+    command($args['arguments'],$pwd,$args);
 } else {
     if ( $args['exec'] == '/etc/init.d/stampzilla' )
 	echo "Usage: /etc/init.d/stampzilla {start|stop|help}\n";
@@ -22,7 +22,7 @@ if ( isset($_SERVER["argv"][1]) ) {
 //    if ( file_put_contents('/etc/stampzilla','') === false )
 //        trigger_error("Failed to create /etc/stampzilla, check access\n",E_USER_ERROR);
 
-function command($cmd,$pwd = '') {
+function command($cmd,$pwd = '',$args=array()) {
     if ( is_string($cmd) )
         $arg = explode(" ",$cmd);
     else
@@ -263,8 +263,7 @@ function command($cmd,$pwd = '') {
         	break;/*}}}*/
         case 'send':/*{{{*/
             unset($arg[0]);
-            print_r($arg);
-            passthru("php send.php \"".implode($arg,"\" \"").'"');
+            passthru("php send.php \"".implode($arg,"\" \"").'" -'.implode($args['flags'],"-").'');
             break;/*}}}*/
 		case 'log':/*{{{*/
 			require_once("lib/udp.php");

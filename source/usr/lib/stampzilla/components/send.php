@@ -1,4 +1,5 @@
 <?php
+
 $fromweb=0;
 if( (isset($_SERVER['argv'][2]) && $_SERVER['argv'][2]=='fromweb') || isset($_SERVER['QUERY_STRING']) ){
     $fromweb=1;
@@ -66,6 +67,7 @@ class sender extends component{
                         $data['ret'] = $pkt['ret'];
                     die();
                 } else {
+                    echo json_format(json_encode($pkt['ret']))."\n";
                     posix_kill($this->child_pid, SIGTERM);
                     die();
                 }
@@ -106,7 +108,7 @@ class sender extends component{
         global $start;
         sleep(2);
         note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
-        note(error,'Timeout reached!');
+        note(error,'Timeout reached ('.round((microtime(true)-$start)*1000,1).'ms)!');
         posix_kill($this->parent_pid, SIGTERM);
         die();
     }
