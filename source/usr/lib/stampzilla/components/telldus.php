@@ -20,8 +20,14 @@ class telldus extends component {
         $this->send_state();
     }
 
+    function exec($cmd){
+        note(debug,'cmd: '.$cmd);
+        exec($cmd,$res);
+        return $res;
+    }
+
     function state() {
-        exec("tdtool --list",$ret);
+        $ret = $this->exec("tdtool --list");
 
         unset($ret[0]);
 
@@ -49,34 +55,36 @@ class telldus extends component {
     }
 
     function set($pkg) {
-        $res = exec("tdtool --on ".$pkg['id']);
+        $res = $this->exec("tdtool --on ".$pkg['id']);
         $this->dev[$pkg['id']] = 255;
         $this->send_state();
 
-        if ( strpos($res,'Success') )
+        print_r($res);
+        if ( strpos($res[0],'Success') )
             return $res;
         return false;
     }
     function reset($pkg) {
-        $res = exec("tdtool --off ".$pkg['id']);
+        $res = $this->exec("tdtool --off ".$pkg['id']);
         $this->dev[$pkg['id']] = 0;
         $this->send_state();
 
-        if ( strpos($res,'Success') )
+        if ( strpos($res[0],'Success') )
             return $res;
         return false;
     }
     function dim($pkg) {
-        $res = exec("tdtool -v ".$pkg['value']." -d ".$pkg['id']);
-        $this->dev[$pkg['id']] = $pkg['value'];
+        $value = round($pkg['value']*(255/100));
+        $res = $this->exec("tdtool -v ".$value." -d ".$pkg['id']);
+        $this->dev[$pkg['id']] = $value;
         $this->send_state();
 
-        if ( strpos($res,'Success') )
+        if ( strpos($res[0],'Success') )
             return $res;
         return false;
     }
     function learn($pkg) {
-        return exec("tdtool --learn ".$pkg['id'],$ret);
+        return $this->exec("tdtool --learn ".$pkg['id']);
     }
 
     function send_state() {

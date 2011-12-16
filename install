@@ -75,17 +75,17 @@ else
     echo "exists"
 fi
 
-echo -n "Checking php config dir..."
-confd=`php --ini|grep 'additional'|awk '{print $7;}'`
-if [ ! -d $confd ]; then
-    echo "missing, creating dir ($confd)"
-    mkdir $confd
-else
-    echo "exists"
-fi
+#echo -n "Checking php config dir..."
+#confd=`php --ini|grep 'additional'|awk '{print $7;}'`
+#if [ ! -d $confd ]; then
+#    echo "missing, creating dir ($confd)"
+#    mkdir $confd
+#else
+#    echo "exists"
+#fi
 
-echo "Writing $confd/stampzilla.ini"
-echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/:/usr/lib/stampzilla" > "$confd/stampzilla.ini"
+#echo "Writing $confd/stampzilla.ini"
+#echo "open_basedir = /srv/http/:/home/:/tmp/:/usr/share/pear/:/etc/init.d/:/etc/stampzilla/:/usr/lib/stampzilla" > "$confd/stampzilla.ini"
 
 echo ""
 echo "All done, have fun!";
