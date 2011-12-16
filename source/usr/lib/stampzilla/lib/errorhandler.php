@@ -10,12 +10,11 @@ if ( isset($_SERVER['argv']) ) {
 }
 
 require_once "constants.php";
-set_error_handler('errorhandler::error');
 
 class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
-		if($no & 32767)
-			return false;
+		//if($no & 32676)
+		//	return false;
 
         switch($no){
             case E_PARSE:
@@ -45,7 +44,6 @@ class errorhandler {
             default:
                 $level = unknown;
         }
-        
 
 		errorhandler::send( $level,$text,array('file'=>$file,'line'=>$line) );
         echo format($level,$text.'@'.$file.':'.$line);
@@ -84,9 +82,11 @@ class errorhandler {
         $utimestamp = microtime(true);
         $timestamp = floor($utimestamp);
         $milliseconds = round(($utimestamp - $timestamp) * 1000000);
-        return date('Y-m-d H:i:s.'.str_pad($milliseconds,6,' '),$timestamp);
+        return date('Y-m-d H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
     }
 }
+
+set_error_handler('errorhandler::error');
 
 function note($level,$text) {
     if ( is_array($text) )
