@@ -1,5 +1,14 @@
 <?php
 
+require_once "../lib/functions.php";
+if ( isset($_SERVER['argv']) ) {
+    $args = arguments($_SERVER['argv']);
+} else {
+    $args = array(
+        'flags' => array()
+    );
+}
+
 require_once "constants.php";
 set_error_handler('errorhandler::error');
 
@@ -57,15 +66,19 @@ class errorhandler {
 			)
 		)."\n";
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8281);
-	}
+    }
 
-	static function recive_pkt( $pkt, $raw ) {
-    	echo "\033[1;36mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
-	}
+    static function recive_pkt( $pkt, $raw ) {
+        global $args;
+        if ( in_array('j',$args['flags']) )
+        	echo "\033[1;36mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
+    }
 
-	static function send_pkt( $pkt, $raw ) {
-    	echo "\033[1;31mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
-	}
+    static function send_pkt( $pkt, $raw ) {
+        global $args;
+        if ( in_array('j',$args['flags']) )
+            echo "\033[1;31mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m";
+    }
 
     static function currentTime() {
         $utimestamp = microtime(true);
@@ -80,10 +93,10 @@ function note($level,$text) {
         $text = json_encode($text);
 
     errorhandler::send($level,$text);
-    
-    echo format($level,$text);
 
- 
+    global $args;
+    if ( in_array('d',$args['flags']) || $level < warning )
+        echo format($level,$text);
 }
 
 function format($level,$text){
