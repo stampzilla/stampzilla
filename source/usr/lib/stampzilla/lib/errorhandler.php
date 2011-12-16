@@ -65,8 +65,13 @@ class errorhandler {
                 'data' => $data
 			)
 		)."\n";
+<<<<<<< Updated upstream
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8281);
     }
+=======
+        socket_sendto($s, $string, strlen($string), 0 ,'192.168.13.255', 8281);
+	}
+>>>>>>> Stashed changes
 
     static function recive_pkt( $pkt, $raw ) {
         global $args;
