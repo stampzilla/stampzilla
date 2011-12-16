@@ -66,7 +66,8 @@ class errorhandler {
 			)
 		)."\n";
         socket_sendto($s, $string, strlen($string), 0 ,'255.255.255.255', 8281);
-    }
+	}
+
     static function recive_pkt( $pkt, $raw ) {
         global $args;
         if ( in_array('j',$args['flags']) )
