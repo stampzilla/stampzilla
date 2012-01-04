@@ -1,6 +1,7 @@
 <?php
 
-require_once "../lib/functions.php";
+require_once "functions.php";
+
 if ( isset($_SERVER['argv']) ) {
     $args = arguments($_SERVER['argv']);
 } else {
@@ -15,6 +16,9 @@ class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
 		//if($no & 32676)
 		//	return false;
+
+        if ( $no == 2 && $text == 'socket_recv(): unable to read from socket [11]: Resource temporarily unavailable' )
+            return false;
 
         switch($no){
             case E_PARSE:
@@ -46,7 +50,7 @@ class errorhandler {
         }
 
 		errorhandler::send( $level,$text,array('file'=>$file,'line'=>$line) );
-        echo format($level,$text.'@'.$file.':'.$line);
+        echo format($level,$text.' {'.$level.'} @'.$file.':'.$line);
 	}
 
 	static function send( $level, $msg, $data=array() ) {
