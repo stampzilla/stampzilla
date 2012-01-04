@@ -14,6 +14,11 @@ class logger {
 		// Create a new udp socket
 		$this->udp = new udp('0.0.0.0','255.255.255.255',8282);
 
+		$msg = "\necho".'<br /><script language="javascript">parent.communicationReady();</script>';
+        echo str_pad($msg,4096,' ',STR_PAD_LEFT);
+        ob_flush();
+        flush();
+
 		while(1) {
 			$this->parent++;
 			if ( !$pkt = $this->udp->listen() )

@@ -256,16 +256,19 @@ class component {
         }
 
         if ( $this->child_pid ) {
-			// Add an signal handler so the child can notify the parent when there are new intercom data
-			pcntl_signal( SIGALRM,array($this,'recive_intercom') );
 
-			// Make sure we dont leave any childs
-			pcntl_signal( SIGINT ,array($this,'kill_child'), true );
-			//pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
-			register_shutdown_function(array($this,'kill_child') );
+            if(isset($sockets[0])){
+                // Add an signal handler so the child can notify the parent when there are new intercom data
+                pcntl_signal( SIGALRM,array($this,'recive_intercom') );
 
-			// Save the intercom socket, and close the other
-			$this->intercom_socket = $sockets[0]; // Reader
+                // Make sure we dont leave any childs
+                pcntl_signal( SIGINT ,array($this,'kill_child'), true );
+                //pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
+                register_shutdown_function(array($this,'kill_child') );
+
+                // Save the intercom socket, and close the other
+                $this->intercom_socket = $sockets[0]; // Reader
+            }
 
 			// Say hello to the network
 			if ( !isset($hashed) )

@@ -1,5 +1,4 @@
 <?php
-
 $layout = array(
 	'rooms' => array(
 		0 => 'Rooms',
@@ -110,25 +109,19 @@ $layout = array(
                     $$('.menu a').removeClass("active");
                     obj.addClass("active");
 
-
-                    if ( menu.layout[obj.id].length == 1 ) {
+                    if ( menu.curSub != obj.id ) {
                         show = false;
-						menu.showPage(obj.id);
-                    } else {
-                        show = true;
-
-                        if ( menu.curSub != obj.id ) {
-                            menu.curSub = obj.id;
-                            $('submenu').innerHTML = '';
-                            for( node in menu.layout[obj.id] ) {
-								if ( node == 0 ) {
-									continue;
-								}
-								if( window.Touch ) {
-									$('submenu').innerHTML += '<a ontouchstart="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node]+'</a>';
-								} else {
-									$('submenu').innerHTML += '<a onClick="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node]+'</a>';
-								}
+                        menu.curSub = obj.id;
+                        $('submenu').innerHTML = '';
+                        for( node in menu.layout[obj.id] ) {
+                            if ( node == 0 ) {
+                                continue;
+                            }
+                            show = true;
+                            if( window.Touch ) {
+                                $('submenu').innerHTML += '<a ontouchstart="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
+                            } else {
+                                $('submenu').innerHTML += '<a onClick="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
                             }
                         }
                     }
@@ -137,11 +130,12 @@ $layout = array(
                         //$('submenu').tween('bottom',62);
                         $('submenu').fade('in');
                     } else {
+					    menu.showPage(obj.id);
                        // $('submenu').tween('bottom',22);
                         $('submenu').fade('out');
                     }
                 },
-				layout: <?php echo json_encode($layout); ?>
+				layout: <?php echo json_encode($layout,JSON_FORCE_OBJECT); ?>
             }
 
             update = function() {
@@ -180,14 +174,41 @@ $layout = array(
 				update();
 				makeFastOnClick();
 				$('iframe').src="incoming.php";
-				setTimeout( function() {
-					sendJSON("type=hello");
-				},100 );
 
 				if ( location.hash > '' ) {
 					menu.showPage(location.hash.substring(1,location.hash.length));
 				}
+
+                window.addEvent('mouseup',function(){
+                  clearTimeout(pressTimer);
+                  // Clear timeout
+                  return false;
+                });
+
+                window.addEvent('mousedown',function(){
+                  // Set timeout
+                  pressTimer = window.setTimeout(function() { alert('longpressed');},1000);
+                  return false; 
+                });
+                window.addEvent('touchend',function(){
+                  clearTimeout(pressTimer);
+                  // Clear timeout
+                  return false;
+                });
+
+                window.addEvent('touchstart',function(){
+                  // Set timeout
+                  pressTimer = window.setTimeout(function() { alert('longpressed');},1000);
+                  return false; 
+                });
+
 			}
+            
+            communicationReady = function(){
+				sendJSON("type=hello");
+                //Fetch a list of all rooms from logic deamon
+                sendJSON("to=logic&cmd=rooms");
+            }
 
 			sendJSON = function(url) {
 				new Request({
@@ -214,6 +235,21 @@ $layout = array(
 							break;
 						case 'ack':
 							switch( pkt.pkt.cmd ) {
+                                case 'rooms':
+                                    for(var prop in pkt.ret) {
+				                        //$('page_rooms').innerHTML += "<br><br><br>"+json;
+                                        var temp = new Object();
+                                        temp["0"] = pkt.ret[prop].name;
+                                        menu.layout.rooms[prop] = temp;
+
+						                el = new Element('div', {id: 'page_'+prop,class: 'page'});
+                                        el.innerHTML = pkt.ret[prop].name;
+
+					                    $('main').adopt(el);
+                                    }
+                                    //menu.main($('rooms'));
+                                    //alert(JSON.stringify(menu.layout.rooms));
+                                    break;
 								case 'state':
 								 	if ( pkt.ret.paused != undefined ) {
 										video.setState(pkt.from,pkt.ret);
@@ -400,6 +436,7 @@ $layout = array(
                 document.body.addClass('iPhone');
             }
             document.ontouchmove = function(e){ e.preventDefault(); }
+
         </script>
         <div class="container" id="container">
 

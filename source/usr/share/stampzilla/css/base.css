@@ -6,6 +6,7 @@ html, body {
 body {
     background: url(../images/old_paper.jpg) #000;
     -webkit-background-size: 2000px 1333px;
+    -webkit-user-select: none;
     color:#fff;
     font-family:sans-serif;
     margin:0px;
