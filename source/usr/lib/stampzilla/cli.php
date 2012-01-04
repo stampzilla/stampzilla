@@ -299,7 +299,10 @@ function command($cmd,$pwd = '',$args=array()) {
             }
             break;/*}}}*/
         default:
-            return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
+            if ( count($arg) == 2 ) {
+                passthru("php send.php \"to={$arg[0]}&cmd={$arg[1]}\" -".implode($args['flags'],"-") );
+            } else 
+                return !trigger_error("Unknown command '{$arg[0]}'",E_USER_ERROR);
     }
 }
 
