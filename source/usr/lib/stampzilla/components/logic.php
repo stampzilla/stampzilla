@@ -7,6 +7,10 @@ class logic extends component {
     protected $settings = array();
     protected $commands = array(
         'rooms' => 'Returns the rooms available',
+        'room' => 'Adds/updates a room definition',
+        'deroom' => 'Remove a room',
+        'schedule' => 'List and add schedule tasks',
+        'unschedule' => 'Remove a scheduled task'
     );
 
     function startup() {
@@ -15,15 +19,51 @@ class logic extends component {
                 note(critical,'Failed to create dir /var/spool/stampzilla/',true);
 
         if ( !is_file('/var/spool/stampzilla/rooms.yml') ) {
-            $this->rooms = array('Default'=>array());
-            if ( !$this->save('rooms') ) 
+            $this->rooms = array(
+                uniqid() => array(
+                    'name' => 'Default'
+                )
+            );
+
+            if ( !$this->_save('rooms') ) 
                 note(critical,'Failed to create file /var/spool/stampzilla/rooms',true);
         }
 
-        $this->load('rooms');
+        $this->_load('rooms');
     }
 
-    function save($file) {
+    function rooms($pkt) {
+        return $this->rooms;
+    }
+
+    function room($pkt) {
+        if( !isset($pkt['name']) )
+            return false;
+
+        $room = array(
+            'name' => $pkt['name']
+        );
+        $id = uniqid();
+
+        $this->rooms[$id] = $room;
+        $this->_save('rooms');
+
+        return $id;
+    }
+
+    function deroom() {
+        if ( !isset($pkt['uuid']) )
+            return false;
+
+        if ( isset($this->rooms[$pkt['uuid']]) ) {
+            unset($this->rooms[$pkt['uuid']]);
+            return $this->_save('rooms');
+        }
+
+        return false;
+    }
+
+    function _save($file) {
         $string = Spyc::YAMLDump($this->$file);
 
         if ( $file == 'schedule' ) 
@@ -32,30 +72,70 @@ class logic extends component {
         return file_put_contents('/var/spool/stampzilla/'.$file.'.yml',$string);
     }
 
-    function load($file) {
+    function _load($file) {
         $this->$file = spyc_load_file('/var/spool/stampzilla/'.$file.'.yml');
+
         return isset($this->$file);
     }
 
     function schedule($pkt) {
         // Require time and command
-        if ( !isset($pkt['time']) || !isset($pkt['command']) ) 
-            return false;
+        if ( !isset($pkt['time']) || !isset($pkt['command']) ) {
+            $this->_load('schedule');
+            return $this->schedule;
+        }
 
         $event = array(
             'time' => $pkt['time'],
-            'command' => $pkt['command']
+            'command' => $pkt['command'],
+            'uuid' => uniqid()
         );
 
         if ( isset($pkt['interval']) )
             $event['interval'] = $pkt['interval'];
 
-        $this->load('schedule');
+        $this->_load('schedule');
         $this->schedule[] = $event;
-        return $this->save('schedule');
+        return $this->_save('schedule');
     }
 
-    function child(){
+    function unschedule($pkt) {
+        if ( !isset($pkt['uuid']) )
+            return false;
+
+        $this->_load('schedule');
+
+        foreach($this->schedule as $key => $line) 
+            if ( $line['uuid'] == $pkt['uuid'] ) {
+                unset($this->schedule[$key]);
+                file_put_contents('/var/spool/stampzilla/reload_schedule',1);
+                return $this->_save('schedule');
+            }
+
+        return false;
+    }
+
+    function reschedule($pkt) {
+        if ( !isset($pkt['uuid']) )
+            return false;
+
+        $this->_load('schedule');
+
+        foreach($this->schedule as $key => $line) 
+            if ( $line['uuid'] == $pkt['uuid'] ) {
+
+                foreach($pkt as $key2 => $line2) {
+                    if( isset($line[$key2]) )
+                        $this->schedule[$key][$key2] = $line2;
+                }
+
+                file_put_contents('/var/spool/stampzilla/reload_schedule',1);
+                return $this->_save('schedule');
+            }
+
+        return false;
+    }
+    function _child(){/*{{{*/
 
         if ( isset($this->event) && $this->event > -1 ) {
             if ( $this->schedule[$this->event]['timestamp'] < time()+1 ) {
@@ -73,7 +153,7 @@ class logic extends component {
         if ( !isset($this->schedule) || is_file('/var/spool/stampzilla/reload_schedule') ) {
             note(debug, 'Reloading schedule');
 
-            if ( !$this->load('schedule') )
+            if ( !$this->_load('schedule') )
                 $this->schedule = array();
 
             if ( is_file('/var/spool/stampzilla/reload_schedule') )
@@ -103,7 +183,7 @@ class logic extends component {
                     $this->event = $key;
                 }
             }
-            $this->save('schedule');
+            $this->_save('schedule');
             unlink('/var/spool/stampzilla/reload_schedule');
 
             if ( $this->event > -1 )
@@ -119,11 +199,11 @@ class logic extends component {
 
             usleep($sleep);
         }
-    }
+    }/*}}}*/
 
 }
 
 $r = new logic();
-$r->start('logic','child');
+$r->start('logic','_child');
 
 ?>
