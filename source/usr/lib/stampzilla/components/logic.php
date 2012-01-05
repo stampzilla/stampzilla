@@ -48,17 +48,38 @@ class logic extends component {
         $this->rooms[$id] = $room;
         $this->_save('rooms');
 
+		$this->broadcast(array(
+			'type' => 'event',
+			'event' => 'addRoom',
+			'uuid' => $id,
+			'data' => $room
+		));
+
+		note(notice,"New room ".$pkt['name']." with UUID ".$id." was created");
+
         return $id;
     }
 
-    function deroom() {
+    function deroom( $pkt ) {
         if ( !isset($pkt['uuid']) )
             return false;
 
+		note(debug,"Deroom uuid ".$pkt['uuid']);
+
         if ( isset($this->rooms[$pkt['uuid']]) ) {
             unset($this->rooms[$pkt['uuid']]);
+			note(notice,"UUID ".$pkt['uuid']." was removed.");
+
+			$this->broadcast(array(
+				'type' => 'event',
+				'event' => 'removeRoom',
+				'uuid' => $pkt['uuid'],
+			));
+
             return $this->_save('rooms');
         }
+
+		note(debug,"UUID ".$pkt['uuid']." was not found!");
 
         return false;
     }

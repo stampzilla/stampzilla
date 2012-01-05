@@ -91,11 +91,50 @@ $layout = array(
                 //$('iframe').src="send.php?"+on;
             }
 
+			var editmode = {
+				longpress: function() {
+					// Only enter editmode on room pages
+					pages = $$('.page.active');
+					if ( pages[0] != undefined && pages[0].hasClass('room') ) {
+						if ( !$(document.body).hasClass('editmodeactive') && confirm("You are about to enter edit mode, is this ok?") ) {
+							$(document.body).addClass('editmodeactive');
+    	                    $('submenu').fade('out');
+						}
+					}
+				},
+				exit: function() {
+					$(document.body).removeClass('editmodeactive');
+				},
+				addRoom: function() {
+					name = prompt("What is the name of the new room?");
+
+					if ( name != null && name != "" && name != "null" ) {
+              			sendJSON("to=logic&cmd=room&name="+name);
+					}
+				},
+				removeRoom: function() {
+					pages = $$('.page.active');
+
+					if ( pages[0] != undefined && pages[0].hasClass('room') ) {
+						id = pages[0].id.substring(5,pages[0].id.length);
+						if ( confirm("You are about to remove the room named '"+id+"', is this ok?") ) {
+							sendJSON("to=logic&cmd=deroom&uuid="+id);
+							editmode.exit();
+						}
+					} else {
+						alert("Unknown room, exiting edit mode");
+						editmode.exit();
+					}
+				}
+			}
+
             var menu = {
                 curSub:'',
 				showPage:function(page){
 					$$('.page').removeClass('active');
-					$('page_'+page).addClass('active');
+					if ( $('page_'+page) != undefined ) {
+						$('page_'+page).addClass('active');
+					}
 					location.hash = page;
 				},
                 sub:function(obj) {
@@ -187,7 +226,7 @@ $layout = array(
 
                 window.addEvent('mousedown',function(){
                   // Set timeout
-                  pressTimer = window.setTimeout(function() { alert('longpressed');},1000);
+                  pressTimer = window.setTimeout(editmode.longpress,1000);
                   return false; 
                 });
                 window.addEvent('touchend',function(){
@@ -198,7 +237,7 @@ $layout = array(
 
                 window.addEvent('touchstart',function(){
                   // Set timeout
-                  pressTimer = window.setTimeout(function() { alert('longpressed');},1000);
+                  pressTimer = window.setTimeout(editmode.longpress,1000);
                   return false; 
                 });
 
@@ -242,7 +281,7 @@ $layout = array(
                                         temp["0"] = pkt.ret[prop].name;
                                         menu.layout.rooms[prop] = temp;
 
-						                el = new Element('div', {id: 'page_'+prop,class: 'page'});
+						                el = new Element('div', {id: 'page_'+prop,class: 'page room'});
                                         el.innerHTML = pkt.ret[prop].name;
 
 					                    $('main').adopt(el);
@@ -298,7 +337,28 @@ $layout = array(
 							switch(pkt.event) {
 								case 'state':
 									video.setState(pkt.from,pkt.data);
-								break;
+									break;
+								case 'addRoom':
+									var temp = new Object();
+									temp["0"] = pkt.data.name;
+									menu.layout.rooms[pkt.uuid] = temp;
+
+									el = new Element('div', {id: 'page_'+pkt.uuid,class: 'page room'});
+									el.innerHTML = pkt.data.name;
+
+									$('main').adopt(el);
+									menu.sub($('page_'+pkt.uuid));
+									menu.curSub = '';
+
+									menu.showPage(pkt.uuid);
+									break;
+								case 'removeRoom':
+									$('page_'+pkt.uuid).dispose();
+                                    delete menu.layout.rooms[pkt.uuid];
+									if ( $(pkt.uuid) != undefined ) {
+										$(pkt.uuid).dispose();
+									}
+									break;
 							}
 							break;
 					}
@@ -446,6 +506,7 @@ $layout = array(
                 <div id="time" onClick="location.reload();"></div>
                 <div id="date"></div>
                 <div id="larm"></div>
+				<div class="editmode" id="editmodehead">Edit mode active</div>
             </div>
             <div class="main" id="main">
 			<?php
@@ -477,6 +538,18 @@ $layout = array(
 							echo '<a onClick="menu.main(this);" id="'.$key.'">'.$line[0].'</a>';
 				?>
             </div>
+			<div class="editmode editmenu">
+				<a>New button</a>
+				<a>New switch</a>
+				<a>New slider</a>
+				<a onClick="editmode.addRoom();">New room</a>
+				<a onClick="editmode.removeRoom();">Remove room</a>
+				<a onClick="editmode.exit();" class="last">Exit</a>
+			</div>
+			<div class="editmode portrait">
+				<h1>Error</h1>
+				Edit mode is not available in portrait orientation, please rotate to landscape orientation!
+			</div>
             <div id="submenu"></div>
         </div>
     </body>
