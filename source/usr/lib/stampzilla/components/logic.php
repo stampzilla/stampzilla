@@ -83,6 +83,20 @@ class logic extends component {
 
         return false;
     }
+	
+	function update($pkt) {
+		$pkt['position'] = str_replace('px','',$pkt['position']);
+		$this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']]['position'] = $pkt['position'];
+
+		$this->broadcast(array(
+			'type' => 'event',
+			'event' => 'roomUpdate',
+			'uuid' => $pkt['room'],
+			'data' => $this->rooms[$pkt['room']]
+		));
+
+		return $this->_save('rooms');
+	}
 
     function _save($file) {
         $string = Spyc::YAMLDump($this->$file);

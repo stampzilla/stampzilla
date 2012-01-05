@@ -67,6 +67,7 @@ $layout = array(
         <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
 
         <script type="text/javascript" src="js/mootools-core-1.3-full-compat-yc.js"></script>
+        <script type="text/javascript" src="js/mootools-more-1.4.0.1.js"></script>
         <script type="text/javascript" src="js/swipe.js"></script>
         <link href="css/base.css" rel="stylesheet" />
         <link rel="stylesheet" media="all and (orientation:portrait)" href="css/portrait.css">
@@ -92,18 +93,48 @@ $layout = array(
             }
 
 			var editmode = {
+				active:false,
 				longpress: function() {
 					// Only enter editmode on room pages
 					pages = $$('.page.active');
 					if ( pages[0] != undefined && pages[0].hasClass('room') ) {
-						if ( !$(document.body).hasClass('editmodeactive') && confirm("You are about to enter edit mode, is this ok?") ) {
-							$(document.body).addClass('editmodeactive');
-    	                    $('submenu').fade('out');
+						//if ( !$(document.body).hasClass('editmodeactive') && confirm("You are about to enter edit mode, is this ok?") ) {
+						if ( !$(document.body).hasClass('editmodeactive') ) {
+							editmode.activate();
 						}
 					}
 				},
+				activate:function() {
+					$(document.body).addClass('editmodeactive');
+					editmode.active = true;
+					$('submenu').fade('out');
+
+					$$('.button').makeDraggable({
+						onStart:function()
+						{
+						  	this.element.setOpacity(.5);
+						  	this.zindex = 100;
+						},
+						onComplete:function()
+						{
+						  	this.element.setOpacity(1);
+						  	this.zindex = 0;
+	  						sendJSON("to=logic&cmd=update&room="+(this.element.id.split('_')[1])+"&element=buttons&uuid="+(this.element.id.split('_')[2])+
+								"&position="+this.element.style.left+","+this.element.style.top+","+this.element.style.width+","+this.element.style.height);
+						}
+					});
+				},
 				exit: function() {
 					$(document.body).removeClass('editmodeactive');
+					editmode.active = false;
+
+					buttons = $$('.button');
+					for( button in buttons ) {
+						if ( buttons[button].data == undefined ) {
+							continue;
+						}
+						$(buttons[button]).retrieve('dragger').detach();
+					}
 				},
 				addRoom: function() {
 					name = prompt("What is the name of the new room?");
@@ -240,12 +271,15 @@ $layout = array(
                   return false; 
                 });
 
+				addEventListener("orientationchange", room.orient);
+
 			}
             
             communicationReady = function(){
 				sendJSON("type=hello");
                 //Fetch a list of all rooms from logic deamon
                 sendJSON("to=logic&cmd=rooms");
+				setTimeout(scrollTo, 0, 0, 1);
             }
 
 			sendJSON = function(url) {
@@ -271,7 +305,8 @@ $layout = array(
 							}
 
 							break;
-						case 'ack':
+						case 'ack':	
+							room.ack( pkt );
 							switch( pkt.pkt.cmd ) {
                                 case 'rooms':
                                     for(var prop in pkt.ret) {
@@ -301,6 +336,7 @@ $layout = array(
 							}
 							break;
 						case 'nak':
+							room.nak( pkt );
 							switch( pkt.pkt.cmd ) {
 								case 'save_setting':
 									settings.save_failed(
@@ -343,6 +379,12 @@ $layout = array(
 									editmode.exit();
 									room.remove(pkt.uuid);
 									break;
+								case 'roomUpdate':
+									room.rooms[pkt.uuid] = pkt.data;
+									if ( !editmode.active ) {
+										room.render(pkt.uuid);
+									}
+									break;
 							}
 							break;
 					}
@@ -371,6 +413,80 @@ $layout = array(
 				},
 				render:function(uuid) {
 					$('page_'+uuid).innerHTML = '<div class="title">'+room.rooms[uuid].name+'</div>';
+
+					if ( room.rooms[uuid].buttons != undefined ) {
+						for( button in room.rooms[uuid].buttons ) {
+							if ( room.rooms[uuid].buttons[button].title == undefined )
+								continue;
+							
+							el = new Element('div', {
+								id: 'button_'+uuid+'_'+button,
+								class: 'button',
+								style: 'position:absolute;'
+							});
+							el.data = room.rooms[uuid].buttons[button];
+							el.data.position = el.data.position.split(',');
+							el.innerHTML = el.data.title;
+							el.onclick = function() {room.button(this)};
+
+							$('page_'+uuid).adopt(el);
+						}
+					}
+
+					room.orient();
+				},
+				orient: function() {
+					orient = 90;
+					if ( window.orientation != undefined ) {
+						orient = window.orientation;
+					}
+
+					buttons = $$('.room .button');
+					for( button in buttons ) {
+						if ( buttons[button].data == undefined ) {
+							continue;
+						}
+						if ( orient == 0 || orient == 180 ) {
+							buttons[button].style.left = buttons[button].data.position[1]+'px';
+							buttons[button].style.bottom = buttons[button].data.position[0]+'px';
+							buttons[button].style.top = '';
+							buttons[button].style.width = buttons[button].data.position[3]+'px';
+							buttons[button].style.height = buttons[button].data.position[2]+'px';
+						} else {
+							buttons[button].style.left = buttons[button].data.position[0]+'px';
+							buttons[button].style.top = buttons[button].data.position[1]+'px';
+							buttons[button].style.bottom = '';
+							buttons[button].style.width = buttons[button].data.position[2]+'px';
+							buttons[button].style.height = buttons[button].data.position[3]+'px';
+						}
+					}
+
+				},
+				button:function(obj) {
+					if ( !editmode.active ) {
+						sendJSON("to="+obj.data.component+"&cmd="+obj.data.cmd);
+					}
+				},
+				ack: function(pkt) {
+					buttons = $$('.room .button');
+					for( button in buttons ) {
+						if ( buttons[button].data == undefined || buttons[button].data.component != pkt.pkt.to || buttons[button].data.cmd != pkt.pkt.cmd ) {
+							continue;
+						}
+
+						$(buttons[button]).highlight("#00ff00");
+					}
+				},
+				nak: function(pkt) {
+					buttons = $$('.room .button');
+					for( button in buttons ) {
+						if ( buttons[button].data == undefined || buttons[button].data.component != pkt.pkt.to || buttons[button].data.cmd != pkt.pkt.cmd ) {
+							continue;
+						}
+
+						$(buttons[button]).highlight("#ff0000");
+					}
+
 				}
 			}
 
@@ -499,11 +615,17 @@ $layout = array(
             var isiPad = navigator.userAgent.match(/iPad/i) != null;
             if (isiPad) {
                 document.body.addClass('iPad');
+				if ( !navigator.standalone ) {
+                	document.body.addClass('embedded');
+				}
             }
 
             var isiPhone = navigator.userAgent.match(/iPhone/i) != null;
             if (isiPhone) {
                 document.body.addClass('iPhone');
+				if ( !navigator.standalone ) {
+                	document.body.addClass('embedded');
+				}
             }
             document.ontouchmove = function(e){ e.preventDefault(); }
 
@@ -559,6 +681,10 @@ $layout = array(
 			<div class="editmode portrait">
 				<h1>Error</h1>
 				Edit mode is not available in portrait orientation, please rotate to landscape orientation!
+			</div>
+			<div class="embeddederror">
+				<h1>Error</h1>
+				To use this remote panel, add a link to your homescreen and start it from there.
 			</div>
             <div id="submenu"></div>
         </div>

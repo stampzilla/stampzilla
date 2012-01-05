@@ -1,6 +1,7 @@
 html, body {
     margin:0;
     padding:0;
+	-webkit-text-size-adjust:none;
 }
 
 body {
@@ -38,6 +39,22 @@ body {
 }
 .editmodeactive .editmode {
 	display:block;
+}
+
+.embeddederror {
+	display:none;
+}
+.embedded .embeddederror {
+	display:block;
+	position:absolute;
+	left:0px;
+	right:0px;
+	top:0px;
+	bottom:0px;
+	background:#f00;
+	z-index:1000;
+	text-align:center;
+	padding:50px;
 }
 
 .status {
@@ -345,6 +362,14 @@ iframe {
 	text-align:center;
 }
 
+.page.room .button {
+	background:#111;
+	border:2px solid #fff;
+	-moz-border-radius:5px;
+	-webkit-border-radius:5px;
+	text-align:center;
+	overflow:hidden;
+}
 
 input.saving {
 	background:#f00;
