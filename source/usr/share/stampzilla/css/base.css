@@ -335,6 +335,15 @@ iframe {
 	font-weight:normal;
 }
 
+.page .title {
+	position:absolute;
+	left:0px;
+	right:0px;
+	top:100px;
+	font-size:100px;
+	opacity:0.2;
+	text-align:center;
+}
 
 
 input.saving {

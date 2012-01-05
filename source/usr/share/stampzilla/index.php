@@ -119,7 +119,6 @@ $layout = array(
 						id = pages[0].id.substring(5,pages[0].id.length);
 						if ( confirm("You are about to remove the room named '"+id+"', is this ok?") ) {
 							sendJSON("to=logic&cmd=deroom&uuid="+id);
-							editmode.exit();
 						}
 					} else {
 						alert("Unknown room, exiting edit mode");
@@ -276,15 +275,7 @@ $layout = array(
 							switch( pkt.pkt.cmd ) {
                                 case 'rooms':
                                     for(var prop in pkt.ret) {
-				                        //$('page_rooms').innerHTML += "<br><br><br>"+json;
-                                        var temp = new Object();
-                                        temp["0"] = pkt.ret[prop].name;
-                                        menu.layout.rooms[prop] = temp;
-
-						                el = new Element('div', {id: 'page_'+prop,class: 'page room'});
-                                        el.innerHTML = pkt.ret[prop].name;
-
-					                    $('main').adopt(el);
+										room.add(prop,pkt.ret[prop]);
                                     }
                                     //menu.main($('rooms'));
                                     //alert(JSON.stringify(menu.layout.rooms));
@@ -339,25 +330,18 @@ $layout = array(
 									video.setState(pkt.from,pkt.data);
 									break;
 								case 'addRoom':
-									var temp = new Object();
-									temp["0"] = pkt.data.name;
-									menu.layout.rooms[pkt.uuid] = temp;
+									editmode.exit();
 
-									el = new Element('div', {id: 'page_'+pkt.uuid,class: 'page room'});
-									el.innerHTML = pkt.data.name;
+									room.add(pkt.uuid,pkt.data);
 
-									$('main').adopt(el);
 									menu.sub($('page_'+pkt.uuid));
 									menu.curSub = '';
 
-									menu.showPage(pkt.uuid);
+									//menu.showPage(pkt.uuid);
 									break;
 								case 'removeRoom':
-									$('page_'+pkt.uuid).dispose();
-                                    delete menu.layout.rooms[pkt.uuid];
-									if ( $(pkt.uuid) != undefined ) {
-										$(pkt.uuid).dispose();
-									}
+									editmode.exit();
+									room.remove(pkt.uuid);
 									break;
 							}
 							break;
@@ -365,6 +349,32 @@ $layout = array(
 				}
 			}
 
+			room = {
+				rooms: new Object(),
+				add: function(uuid,data) {
+					var temp = new Object();
+					temp["0"] = data.name;
+					menu.layout.rooms[uuid] = temp;
+
+					el = new Element('div', {id: 'page_'+uuid,class: 'page room'});
+					$('main').adopt(el);
+
+					room.rooms[uuid] = data;
+					room.render(uuid);
+				},
+				remove:function(uuid) {
+					$('page_'+uuid).dispose();
+					delete menu.layout.rooms[uuid];
+					if ( $(uuid) != undefined ) {
+						$(uuid).dispose();
+					}
+				},
+				render:function(uuid) {
+					$('page_'+uuid).innerHTML = '<div class="title">'+room.rooms[uuid].name+'</div>';
+				}
+			}
+
+	
 			settings = {
 				addComponent:function(name,classes,settings) {
 					if ( $('component_'+name) == undefined ) {
