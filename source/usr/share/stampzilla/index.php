@@ -66,9 +66,8 @@ $layout = array(
         <link rel="apple-touch-startup-image" href="img/splash.png" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
 
-        <script type="text/javascript" src="js/mootools-core-1.3-full-compat-yc.js"></script>
-        <script type="text/javascript" src="js/mootools-more-1.4.0.1.js"></script>
-        <script type="text/javascript" src="js/swipe.js"></script>
+        <script type="text/javascript" src="js/all.php"></script>
+
         <link href="css/base.css" rel="stylesheet" />
         <link rel="stylesheet" media="all and (orientation:portrait)" href="css/portrait.css">
         <link rel="stylesheet" media="all and (orientation:landscape)" href="css/landscape.css">
@@ -92,155 +91,43 @@ $layout = array(
                 //$('iframe').src="send.php?"+on;
             }
 
-			var editmode = {
-				active:false,
-				longpress: function() {
-					// Only enter editmode on room pages
-					pages = $$('.page.active');
-					if ( pages[0] != undefined && pages[0].hasClass('room') ) {
-						//if ( !$(document.body).hasClass('editmodeactive') && confirm("You are about to enter edit mode, is this ok?") ) {
-						if ( !$(document.body).hasClass('editmodeactive') ) {
-							editmode.activate();
-						}
-					}
-				},
-				activate:function() {
-					$(document.body).addClass('editmodeactive');
-					editmode.active = true;
-					$('submenu').fade('out');
+			menu.layout = <?php echo json_encode($layout,JSON_FORCE_OBJECT); ?>;
 
-					$$('.button').makeDraggable({
-						onStart:function()
-						{
-						  	this.element.setOpacity(.5);
-						  	this.zindex = 100;
-						},
-						onComplete:function()
-						{
-						  	this.element.setOpacity(1);
-						  	this.zindex = 0;
-	  						sendJSON("to=logic&cmd=update&room="+(this.element.id.split('_')[1])+"&element=buttons&uuid="+(this.element.id.split('_')[2])+
-								"&position="+this.element.style.left+","+this.element.style.top+","+this.element.style.width+","+this.element.style.height);
-						}
-					});
-				},
-				exit: function() {
-					$(document.body).removeClass('editmodeactive');
-					editmode.active = false;
-
-					buttons = $$('.button');
-					for( button in buttons ) {
-						if ( buttons[button].data == undefined ) {
-							continue;
-						}
-						$(buttons[button]).retrieve('dragger').detach();
-					}
-				},
-				addRoom: function() {
-					name = prompt("What is the name of the new room?");
-
-					if ( name != null && name != "" && name != "null" ) {
-              			sendJSON("to=logic&cmd=room&name="+name);
-					}
-				},
-				removeRoom: function() {
-					pages = $$('.page.active');
-
-					if ( pages[0] != undefined && pages[0].hasClass('room') ) {
-						id = pages[0].id.substring(5,pages[0].id.length);
-						if ( confirm("You are about to remove the room named '"+id+"', is this ok?") ) {
-							sendJSON("to=logic&cmd=deroom&uuid="+id);
-						}
-					} else {
-						alert("Unknown room, exiting edit mode");
-						editmode.exit();
-					}
-				}
+			updateClock = function() {
+				setTimeout('updateClock()',1000);
+				now = new Date();
+				months = new Array('Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December');
+				$('time').innerHTML = (now.getHours()<10?'0':'')+now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+'<span>'+(now.getSeconds()<10?'0':'')+now.getSeconds()+'</span>';
+				$('date').innerHTML = now.getDate()+':e '+months[now.getMonth()]+' '+now.getFullYear();
 			}
 
-            var menu = {
-                curSub:'',
-				showPage:function(page){
-					$$('.page').removeClass('active');
-					if ( $('page_'+page) != undefined ) {
-						$('page_'+page).addClass('active');
-					}
-					location.hash = page;
-				},
-                sub:function(obj) {
-                    $$('#submenu a').removeClass("active");
-                    obj.addClass("active");
-                    $('submenu').fade('out');
-
-					menu.showPage(obj.id);
-                },
-                main:function(obj) {
-                    $$('.menu a').removeClass("active");
-                    obj.addClass("active");
-
-                    if ( menu.curSub != obj.id ) {
-                        show = false;
-                        menu.curSub = obj.id;
-                        $('submenu').innerHTML = '';
-                        for( node in menu.layout[obj.id] ) {
-                            if ( node == 0 ) {
-                                continue;
-                            }
-                            show = true;
-                            if( window.Touch ) {
-                                $('submenu').innerHTML += '<a ontouchstart="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
-                            } else {
-                                $('submenu').innerHTML += '<a onClick="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
-                            }
-                        }
-                    }
-
-                    if ( show ) {
-                        //$('submenu').tween('bottom',62);
-                        $('submenu').fade('in');
-                    } else {
-					    menu.showPage(obj.id);
-                       // $('submenu').tween('bottom',22);
-                        $('submenu').fade('out');
-                    }
-                },
-				layout: <?php echo json_encode($layout,JSON_FORCE_OBJECT); ?>
-            }
-
-            update = function() {
-                setTimeout('update()',1000);
-                now = new Date();
-                months = new Array('Januari','Februari','Mars','April','Maj','Juni','Juli','Augusti','September','Oktober','November','December');
-                $('time').innerHTML = (now.getHours()<10?'0':'')+now.getHours()+':'+(now.getMinutes()<10?'0':'')+now.getMinutes()+'<span>'+(now.getSeconds()<10?'0':'')+now.getSeconds()+'</span>';
-                $('date').innerHTML = now.getDate()+':e '+months[now.getMonth()]+' '+now.getFullYear();
-            }
-
-            makeFastOnClick = function() {
+			makeFastOnClick = function() {
 				if( !window.Touch )
 					return false;
 
-                var elem = document.getElementsByTagName("*");
-                var len = elem.length;
+				var elem = document.getElementsByTagName("*");
+				var len = elem.length;
 
-                var found =0;
-                for(var i=0;i<len;i++) {
-                    if ( elem[i].onclick != undefined ) {
-                        found++;
+				var found =0;
+				for(var i=0;i<len;i++) {
+					if ( elem[i].onclick != undefined ) {
+						found++;
 
-                        elem[i].ontouchstart = elem[i].onclick;
-                        elem[i].onclick = undefined;
-                    }
-                }
+						elem[i].ontouchstart = elem[i].onclick;
+						elem[i].onclick = undefined;
+					}
+				}
 
 				return true;
-            }
+			}
 
+            
 			pageLoad = function() {
 				Request.prototype.addEvents({
 					'onComplete': makeFastOnClick,
 				});
 				setTimeout(function() { window.scrollTo(0, 1); }, 1000);
-				update();
+				updateClock();
 				makeFastOnClick();
 				$('iframe').src="incoming.php";
 
@@ -275,339 +162,6 @@ $layout = array(
 
 			}
             
-            communicationReady = function(){
-				sendJSON("type=hello");
-                //Fetch a list of all rooms from logic deamon
-                sendJSON("to=logic&cmd=rooms");
-				setTimeout(scrollTo, 0, 0, 1);
-            }
-
-			sendJSON = function(url) {
-				new Request({
-					url: "send.php?"+url
-				}).send();
-			}
-
-			incoming = function( json ) {
-				//$('page_rooms').innerHTML += "<br><br><br>"+json;
-				pkt = eval('('+json+')');
-
-				// Coomands
-				if ( pkt.cmd != undefined ) {
-					switch( pkt.cmd ) {
-						case 'greetings':
-							settings.addComponent(pkt.from,pkt.class,pkt.settings);
-
-							for (c in pkt.class) {
-								if ( pkt.class[c] == 'video.player' ) {
-									video.addPlayer(pkt.from);
-								}
-							}
-
-							break;
-						case 'ack':	
-							room.ack( pkt );
-							switch( pkt.pkt.cmd ) {
-                                case 'rooms':
-                                    for(var prop in pkt.ret) {
-										room.add(prop,pkt.ret[prop]);
-                                    }
-                                    //menu.main($('rooms'));
-                                    //alert(JSON.stringify(menu.layout.rooms));
-                                    break;
-								case 'state':
-								 	if ( pkt.ret.paused != undefined ) {
-										video.setState(pkt.from,pkt.ret);
-									}
-									break;
-								case 'media':
-									video.addMedia(pkt.from,pkt.ret.result.movies);
-									break;
-								case 'save_setting':
-									settings.save_success(
-										pkt.from,
-										pkt.pkt.key,
-										pkt.ret.value
-									);
-									break;
-								default:
-									//alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
-									break;
-							}
-							break;
-						case 'nak':
-							room.nak( pkt );
-							switch( pkt.pkt.cmd ) {
-								case 'save_setting':
-									settings.save_failed(
-										pkt.from,
-										pkt.pkt.key,
-										pkt.ret.value,
-										pkt.ret.msg
-									);
-									break;
-								default:
-									alert('NAK from '+pkt.from+' - '+pkt.pkt.cmd);
-									break;
-							}
-							break;
-						case 'bye':
-							settings.removeComponent(pkt.from);
-							video.removePlayer(pkt.from);
-							break;
-					}
-				}
-				// Types
-				if ( pkt.type != undefined ) {
-					switch( pkt.type ) {
-						case 'event':
-							switch(pkt.event) {
-								case 'state':
-									video.setState(pkt.from,pkt.data);
-									break;
-								case 'addRoom':
-									editmode.exit();
-
-									room.add(pkt.uuid,pkt.data);
-
-									menu.sub($('page_'+pkt.uuid));
-									menu.curSub = '';
-
-									//menu.showPage(pkt.uuid);
-									break;
-								case 'removeRoom':
-									editmode.exit();
-									room.remove(pkt.uuid);
-									break;
-								case 'roomUpdate':
-									room.rooms[pkt.uuid] = pkt.data;
-									if ( !editmode.active ) {
-										room.render(pkt.uuid);
-									}
-									break;
-							}
-							break;
-					}
-				}
-			}
-
-			room = {
-				rooms: new Object(),
-				add: function(uuid,data) {
-					var temp = new Object();
-					temp["0"] = data.name;
-					menu.layout.rooms[uuid] = temp;
-
-					el = new Element('div', {id: 'page_'+uuid,class: 'page room'});
-					$('main').adopt(el);
-
-					room.rooms[uuid] = data;
-					room.render(uuid);
-				},
-				remove:function(uuid) {
-					$('page_'+uuid).dispose();
-					delete menu.layout.rooms[uuid];
-					if ( $(uuid) != undefined ) {
-						$(uuid).dispose();
-					}
-				},
-				render:function(uuid) {
-					$('page_'+uuid).innerHTML = '<div class="title">'+room.rooms[uuid].name+'</div>';
-
-					if ( room.rooms[uuid].buttons != undefined ) {
-						for( button in room.rooms[uuid].buttons ) {
-							if ( room.rooms[uuid].buttons[button].title == undefined )
-								continue;
-							
-							el = new Element('div', {
-								id: 'button_'+uuid+'_'+button,
-								class: 'button',
-								style: 'position:absolute;'
-							});
-							el.data = room.rooms[uuid].buttons[button];
-							el.data.position = el.data.position.split(',');
-							el.innerHTML = el.data.title;
-							el.onclick = function() {room.button(this)};
-
-							$('page_'+uuid).adopt(el);
-						}
-					}
-
-					room.orient();
-				},
-				orient: function() {
-					orient = 90;
-					if ( window.orientation != undefined ) {
-						orient = window.orientation;
-					}
-
-					buttons = $$('.room .button');
-					for( button in buttons ) {
-						if ( buttons[button].data == undefined ) {
-							continue;
-						}
-						if ( orient == 0 || orient == 180 ) {
-							buttons[button].style.left = buttons[button].data.position[1]+'px';
-							buttons[button].style.bottom = buttons[button].data.position[0]+'px';
-							buttons[button].style.top = '';
-							buttons[button].style.width = buttons[button].data.position[3]+'px';
-							buttons[button].style.height = buttons[button].data.position[2]+'px';
-						} else {
-							buttons[button].style.left = buttons[button].data.position[0]+'px';
-							buttons[button].style.top = buttons[button].data.position[1]+'px';
-							buttons[button].style.bottom = '';
-							buttons[button].style.width = buttons[button].data.position[2]+'px';
-							buttons[button].style.height = buttons[button].data.position[3]+'px';
-						}
-					}
-
-				},
-				button:function(obj) {
-					if ( !editmode.active ) {
-						sendJSON("to="+obj.data.component+"&cmd="+obj.data.cmd);
-					}
-				},
-				ack: function(pkt) {
-					buttons = $$('.room .button');
-					for( button in buttons ) {
-						if ( buttons[button].data == undefined || buttons[button].data.component != pkt.pkt.to || buttons[button].data.cmd != pkt.pkt.cmd ) {
-							continue;
-						}
-
-						$(buttons[button]).highlight("#00ff00");
-					}
-				},
-				nak: function(pkt) {
-					buttons = $$('.room .button');
-					for( button in buttons ) {
-						if ( buttons[button].data == undefined || buttons[button].data.component != pkt.pkt.to || buttons[button].data.cmd != pkt.pkt.cmd ) {
-							continue;
-						}
-
-						$(buttons[button]).highlight("#ff0000");
-					}
-
-				}
-			}
-
-	
-			settings = {
-				addComponent:function(name,classes,settings) {
-					if ( $('component_'+name) == undefined ) {
-						s = '';
-
-						for( key in settings ) {
-							row = settings[key];
-							switch( row['type'] ) {
-								case 'text':
-									value = '';
-									if ( row['value'] != undefined ) {
-										value = row['value'];
-									}
-									s += '<div><label for="'+name+'_'+key+'">'+row['name']+'</label><input type="text" id="setting_'+name+'_'+key+'" name="'+name+'_'+key+'" onChange="settings.save(this,\''+name+'\',\''+key+'\');" value="'+value+'"></div>';
-									break;
-							}
-						}
-						el = new Element('div', {id: 'component_'+name});
-						el.innerHTML = '<h2>'+name+" <span>("+classes+") <a href=\"javascript:sendJSON('to="+name+"&cmd=kill');\">[Kill]</a></span></h2>"+s;
-					    $('active_nodes').adopt(el);
-                    }
-				},
-				removeComponent:function(name) {
-					if ( $('component_'+name) != undefined ) {
-						$('component_'+name).dispose();
-					}
-				},
-				save:function(obj,name,key) {
-					$(obj).addClass('saving');
-					$(obj).disabled = true;
-					sendJSON('to='+name+'&cmd=save_setting&key='+key+'&value='+obj.value);
-					return true;
-				},
-				save_success: function(name,key,value) {
-					$('setting_'+name+'_'+key).removeClass('saving');
-					$('setting_'+name+'_'+key).value = value;
-					$('setting_'+name+'_'+key).disabled = false;
-				},
-				save_failed: function(name,key,value,msg) {
-					$('setting_'+name+'_'+key).removeClass('saving');
-					$('setting_'+name+'_'+key).value = value;
-					$('setting_'+name+'_'+key).disabled = false;
-					
-					alert('Failed to save: '+msg);
-				}
-
-			};
-
-			video = {
-				players:new Array(),
-				addPlayer:function(name) {
-					video.removePlayer(name);
-					video.players[video.players.length] = name;
-
-					$('videoplayers').innerHTML += 
-						'<div id="videoplayer_'+name+'">'+
-						'<div class="radio play" onclick="sendJSON(\'to='+name+'&cmd=play\');">Play</div>'+
-						'<div class="radio pause" onclick="sendJSON(\'to='+name+'&cmd=pause\');">Pause</div>'+
-						'<div class="radio stop" onclick="sendJSON(\'to='+name+'&cmd=stop\');">Stop</div>'+
-						'</div>';
-					
-					
-					sendJSON("to="+name+"&cmd=state");
-					sendJSON("to="+name+"&cmd=media");
-				},
-				removePlayer:function(name) {
-					if ( $('videoplayer_'+name) != undefined ) {
-						$('videoplayer_'+name).dispose();
-						$$('.videoplayer_'+name).dispose();
-					}
-				},
-				setState:function(name,state) {
-					$$('#videoplayer_'+name+' .radio').removeClass('true');
-
-					if ( state.playing ) {
-						if ( state.paused ) {
-							$$('#videoplayer_'+name+' .pause').addClass('true');
-						} else {
-							$$('#videoplayer_'+name+' .play').addClass('true');
-						}
-					} else {
-						$$('#videoplayer_'+name+' .stop').addClass('true');
-					}
-				},
-				addMedia:function(name,movies){
-					list = '';
-					len = movies.length;
-					$('movie_files').innerHTML = '';
-
-					for(var a=0;a<len;a++) {
-						list += '<a onClick="sendJSON(\'to='+name+'&cmd=PlayMovie&file='+movies[a].movieid+'\');"';
-						
-						if ( movies[a].thumbnail != undefined ) {
-							list += ' style="background-image:url(resize.php?url='+movies[a].thumbnail+');"';
-						}
-
-						list += ' class="movie videoplayer_'+name;
-
-						if ( movies[a].lastplayed != undefined ) {
-							list += ' played';
-						}						
-
-						list += '"><div class="new">New</div>';
-						for( field in movies[a] ) {
-							value = eval('movies[a].'+field);
-
-							if ( field == 'rating' )
-								value = Math.round(value);
-
-							list += '<div class="'+field+'">'+value+'</div>';
-						}
-
-						list += '</a>';
-					}
-					$('movie_files').innerHTML = list;
-				}
-			}
         </script>
     </head>
     <body onload="pageLoad();">
