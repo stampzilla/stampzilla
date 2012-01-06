@@ -213,6 +213,7 @@ $layout = array(
             </div>
 			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
 				<div class="parameters"></div>
+				<div class="remove" onClick="editmode.remove();">Remove</div>
 				<div class="exit" onClick="$(this.parentNode).fade();">X</div>
 			</div>
             <div class="menu">
@@ -227,7 +228,7 @@ $layout = array(
 				?>
             </div>
 			<div class="editmode editmenu">
-				<a>New button</a>
+				<a onClick="editmode.addButton(this);">New button</a>
 				<a>New switch</a>
 				<a>New slider</a>
 				<a onClick="editmode.addRoom();">New room</a>

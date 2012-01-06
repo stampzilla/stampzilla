@@ -25,12 +25,16 @@ room = {
 		} else {
 			$('page_'+uuid).getElement('h1').innerHTML = room.rooms[uuid].name;
 		}
+	
+		list = new Array();
 
 		if ( room.rooms[uuid].buttons != undefined ) {
 			for( button in room.rooms[uuid].buttons ) {
 				if ( room.rooms[uuid].buttons[button].title == undefined )
 					continue;
 				
+				list.push(button);
+
 				if ( $('button_'+uuid+'_'+button) == undefined ) {
 					el = new Element('div', {
 						id: 'button_'+uuid+'_'+button,
@@ -48,9 +52,22 @@ room = {
 				el.uuid = button;
 				el.data.position = el.data.position.split(',');
 				el.getElement('.head').innerHTML = el.data.title;
-				//el.onclick = function() {room.button(this)};
+				el.onclick = function() {room.button(this)};
 			}
 		}
+
+		buttons = $$('#page_'+uuid+' .button');
+		for( button in buttons ) {
+			if ( buttons[button].data == undefined ) {
+				continue;
+			}
+
+			if ( list.indexOf(buttons[button].uuid) == -1 ) {
+				$(buttons[button]).dispose();
+			}
+		}
+
+		editmode.render();
 
 		room.orient();
 	},

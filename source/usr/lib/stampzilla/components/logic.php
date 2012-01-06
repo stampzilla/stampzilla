@@ -105,6 +105,53 @@ class logic extends component {
 		return $this->ack($pkt,array('value'=>$pkt['value']));
 	}
 
+	function create($pkt) {
+		switch($pkt['element']) {
+			case 'buttons':
+				$this->rooms[$pkt['room']]['buttons'][uniqid()] = array(
+					'title' => 'New button',
+					'position' => ($pkt['x']-50).','.($pkt['y']-50).',100,100',
+					'component' => 'UNCONFIGURED',
+					'cmd' => 'UNCONFIGURED'
+				);
+				break;
+			default:
+				return $this->nak($pkt,'Unknown element type "'.$pkt['element'].'"');
+		}
+
+		note(notice,"Created new {$pkt['element']} in {$pkt['room']}");
+		$this->_save('rooms');
+
+		$this->broadcast(array(
+			'type' => 'event',
+			'event' => 'roomUpdate',
+			'uuid' => $pkt['room'],
+			'data' => $this->rooms[$pkt['room']]
+		));
+
+		return true;
+	}
+
+
+	function remove($pkt) {
+		if ( !isset($this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']]) )
+			return false;
+
+		unset($this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']]);
+
+		note(notice,"Removed element {$pkt['uuid']} in {$pkt['room']}");
+		$this->_save('rooms');
+
+		$this->broadcast(array(
+			'type' => 'event',
+			'event' => 'roomUpdate',
+			'uuid' => $pkt['room'],
+			'data' => $this->rooms[$pkt['room']]
+		));
+
+		return true;
+	}	
+
     function _save($file) {
         $string = Spyc::YAMLDump($this->$file);
 

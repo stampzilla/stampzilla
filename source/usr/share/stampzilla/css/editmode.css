@@ -1,3 +1,53 @@
+.editmode {
+	display:none;
+}
+.editmodeactive .editmode {
+	display:block;
+}
+
+#editmodehead {
+	position:absolute;
+	top:20px;
+	left:20px;
+	padding:6px;
+	background:#f00;
+	font-size:30px;
+}
+
+.editmenu {
+    position:absolute;
+    bottom:0px;
+    left:0px;
+    height:60px;
+	right:0px;
+    z-index:200;
+    background:#f00;
+}
+
+.editmenu a {
+    display:block;
+    float:left;
+    padding-top:17px;
+    height:42px;
+    margin-right:10px;
+    width:162px;
+    text-align:center;
+    color:#fff;
+    text-decoration:none;
+    font-size:20px;
+}
+
+.editmenu a.active {
+    color:#000;
+	background:#fff;
+	font-weight:bold;
+}
+
+.editmenu a.last {
+    margin-right:0px;
+    width:164px;
+}
+
 #settings_pane {
 	position:absolute;
 	top:110px;
@@ -7,6 +57,21 @@
 	background:#000;
 	border:1px solid #fff;
 	z-index:900;
+}
+
+#settings_pane .remove {
+	position:absolute;
+	top:0px;
+	right:50px;
+	width:150px;
+	height:40px;
+	border-left:1px solid #fff;
+	border-bottom:1px solid #fff;
+	font-size:24px;
+	text-align:center;
+	cursor:pointer;
+	padding-top:10px;
+	background:#f00;
 }
 
 #settings_pane .exit {

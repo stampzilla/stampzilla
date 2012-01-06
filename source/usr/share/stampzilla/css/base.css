@@ -13,7 +13,7 @@ body {
 }
 
 body.iPad {
-	font-family:Futura-Medium
+	font-family:Helvetica-Light
 }
 
 .container {
@@ -35,13 +35,6 @@ body.iPad {
 
 .iPad .bg {
     display:none;
-}
-
-.editmode {
-	display:none;
-}
-.editmodeactive .editmode {
-	display:block;
 }
 
 .embeddederror {
@@ -109,15 +102,6 @@ body.iPad {
     bottom:0px;
     padding:10px;
     right:0px;
-}
-
-#editmodehead {
-	position:absolute;
-	top:20px;
-	left:20px;
-	padding:6px;
-	background:#f00;
-	font-size:30px;
 }
 
 .iPhone .status {
@@ -188,34 +172,6 @@ body.iPad {
     font-weight:bold;
 }
 
-.editmenu {
-    position:absolute;
-    bottom:0px;
-    left:0px;
-    height:60px;
-	right:0px;
-    z-index:200;
-    background:#f00;
-}
-
-.editmenu a {
-    display:block;
-    float:left;
-    padding-top:17px;
-    height:42px;
-    margin-right:10px;
-    width:162px;
-    text-align:center;
-    color:#fff;
-    text-decoration:none;
-    font-size:20px;
-}
-
-.editmenu a.last {
-    margin-right:0px;
-    width:164px;
-}
-
 .main {
     position:absolute;
     top:102px;
@@ -236,7 +192,11 @@ body.iPad {
 
 .main .page {
 	display:none;
-
+	position:absolute;
+	left:0px;
+	right:0px;
+	top:0px;
+	bottom:0px;
 }
 
 .main .active {
