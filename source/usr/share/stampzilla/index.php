@@ -69,6 +69,7 @@ $layout = array(
         <script type="text/javascript" src="js/all.php"></script>
 
         <link href="css/base.css" rel="stylesheet" />
+        <link href="css/editmode.css" rel="stylesheet" />
         <link rel="stylesheet" media="all and (orientation:portrait)" href="css/portrait.css">
         <link rel="stylesheet" media="all and (orientation:landscape)" href="css/landscape.css">
         <script language="javascript">
@@ -138,24 +139,20 @@ $layout = array(
                 window.addEvent('mouseup',function(){
                   clearTimeout(pressTimer);
                   // Clear timeout
-                  return false;
                 });
 
                 window.addEvent('mousedown',function(){
                   // Set timeout
                   pressTimer = window.setTimeout(editmode.longpress,1000);
-                  return false; 
                 });
                 window.addEvent('touchend',function(){
                   clearTimeout(pressTimer);
                   // Clear timeout
-                  return false;
                 });
 
                 window.addEvent('touchstart',function(){
                   // Set timeout
                   pressTimer = window.setTimeout(editmode.longpress,1000);
-                  return false; 
                 });
 
 				addEventListener("orientationchange", room.orient);
@@ -188,6 +185,7 @@ $layout = array(
 
             <div class="bg"></div>
             <div class="status">
+
                 <div id="temp"></div>
                 <div id="time" onClick="location.reload();"></div>
                 <div id="date"></div>
@@ -213,6 +211,10 @@ $layout = array(
 
 			?>
             </div>
+			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
+				<div class="parameters"></div>
+				<div class="exit" onClick="$(this.parentNode).fade();">X</div>
+			</div>
             <div class="menu">
 				<?php
 					end($layout);

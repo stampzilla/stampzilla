@@ -85,8 +85,12 @@ class logic extends component {
     }
 	
 	function update($pkt) {
-		$pkt['position'] = str_replace('px','',$pkt['position']);
-		$this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']]['position'] = $pkt['position'];
+		$pkt['value'] = str_replace('px','',$pkt['value']);
+		
+		if ( !isset($this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']][$pkt['field']]) ) 
+			return $this->nak($pkt,array('msg' => 'Field "'.$pkt['field'].'" do not exists!','value'=>''));
+
+		$this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']][$pkt['field']] = $pkt['value'];
 
 		$this->broadcast(array(
 			'type' => 'event',
@@ -95,7 +99,10 @@ class logic extends component {
 			'data' => $this->rooms[$pkt['room']]
 		));
 
-		return $this->_save('rooms');
+		note(notice,"Value updated for room {$pkt['room']} > {$pkt['element']}({$pkt['uuid']}) {$pkt['field']} = {$pkt['value']}");
+		$this->_save('rooms');
+
+		return $this->ack($pkt,array('value'=>$pkt['value']));
 	}
 
     function _save($file) {

@@ -33,6 +33,9 @@ incoming = function( json ) {
 				room.ack( pkt );
 				switch( pkt.pkt.cmd ) {
 					case 'rooms':
+						if ( editmode.active ) {
+							break;
+						}
 						for(var prop in pkt.ret) {
 							room.add(prop,pkt.ret[prop]);
 						}
@@ -57,6 +60,12 @@ incoming = function( json ) {
 							pkt.ret.value
 						);
 						break;
+					case 'update':
+						editmode.save_success(
+							pkt.pkt.id,
+							pkt.ret.value
+						);
+						break;
 					default:
 						//alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
 						break;
@@ -69,6 +78,13 @@ incoming = function( json ) {
 						settings.save_failed(
 							pkt.from,
 							pkt.pkt.key,
+							pkt.ret.value,
+							pkt.ret.msg
+						);
+						break;
+					case 'update':
+						editmode.save_failed(
+							pkt.pkt.id,
 							pkt.ret.value,
 							pkt.ret.msg
 						);
@@ -108,9 +124,7 @@ incoming = function( json ) {
 						break;
 					case 'roomUpdate':
 						room.rooms[pkt.uuid] = pkt.data;
-						if ( !editmode.active ) {
-							room.render(pkt.uuid);
-						}
+						room.render(pkt.uuid);
 						break;
 				}
 				break;

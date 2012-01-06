@@ -19,24 +19,36 @@ room = {
 		}
 	},
 	render:function(uuid) {
-		$('page_'+uuid).innerHTML = '<div class="title">'+room.rooms[uuid].name+'</div>';
+		document.title = $('page_'+uuid).getElement('h1');
+		if ( $('page_'+uuid).getElement('h1') == undefined ) {
+			//$('page_'+uuid).innerHTML += '<div class="title">'+room.rooms[uuid].name+'</div>';
+		} else {
+			$('page_'+uuid).getElement('h1').innerHTML = room.rooms[uuid].name;
+		}
 
 		if ( room.rooms[uuid].buttons != undefined ) {
 			for( button in room.rooms[uuid].buttons ) {
 				if ( room.rooms[uuid].buttons[button].title == undefined )
 					continue;
 				
-				el = new Element('div', {
-					id: 'button_'+uuid+'_'+button,
-					class: 'button',
-					style: 'position:absolute;'
-				});
-				el.data = room.rooms[uuid].buttons[button];
-				el.data.position = el.data.position.split(',');
-				el.innerHTML = el.data.title;
-				el.onclick = function() {room.button(this)};
+				if ( $('button_'+uuid+'_'+button) == undefined ) {
+					el = new Element('div', {
+						id: 'button_'+uuid+'_'+button,
+						class: 'button',
+						style: 'position:absolute;'
+					});
+					el.innerHTML = '<span class="head"></span>';
+					$('page_'+uuid).adopt(el);
+				} else {
+					el = $('button_'+uuid+'_'+button);
+				}
 
-				$('page_'+uuid).adopt(el);
+				el.data = room.rooms[uuid].buttons[button];
+				el.room = uuid;
+				el.uuid = button;
+				el.data.position = el.data.position.split(',');
+				el.getElement('.head').innerHTML = el.data.title;
+				//el.onclick = function() {room.button(this)};
 			}
 		}
 

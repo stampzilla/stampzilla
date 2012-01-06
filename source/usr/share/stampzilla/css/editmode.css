@@ -1,0 +1,46 @@
+#settings_pane {
+	position:absolute;
+	top:110px;
+	left:10px;
+	right:10px;
+	bottom:10px;
+	background:#000;
+	border:1px solid #fff;
+	z-index:900;
+}
+
+#settings_pane .exit {
+	position:absolute;
+	top:0px;
+	right:0px;
+	width:50px;
+	height:50px;
+	border-left:1px solid #fff;
+	border-bottom:1px solid #fff;
+	font-size:44px;
+	text-align:center;
+	cursor:pointer;
+}
+
+#settings_pane .parameters {
+	position:absolute;
+	left:0px;
+	top:0px;
+	width:300px;
+	bottom:0px;
+	border-right:1px solid #fff;
+	padding:20px;
+}
+
+#settings_pane .parameters div {
+	clear:both;
+	text-transform:capitalize;
+}
+
+#settings_pane .parameters div div {
+	padding:4px;
+	float:right;
+}
+#settings_pane .parameters div input {
+	float:right;
+}
