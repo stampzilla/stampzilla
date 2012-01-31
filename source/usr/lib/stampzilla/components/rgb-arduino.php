@@ -16,6 +16,8 @@ class rgb extends component {
         exec("stty -F /dev/arduino 9600 raw");
         if ( !$this->t = fopen('/dev/arduino','r+b') )
             die(" - Failed to open\n");
+
+		$this->set("FFF");
     }
 
     function set($pkt) {
@@ -35,6 +37,7 @@ class rgb extends component {
         }
 
         if ( isset($r) ) {
+			$this->setState('1',pack('H*',chr($r).chr($g).chr($b)) );
             note(debug,"Sending color $r,$g,$b");
             fwrite($this->t,chr($r).chr($g).chr($b));
             return true;
