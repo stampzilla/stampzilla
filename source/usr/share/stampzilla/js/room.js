@@ -1,5 +1,17 @@
 room = {
 	rooms: new Object(),
+	clear: function() {
+		menu.layout.rooms = {
+			0: 'Rooms'
+		};
+		$$('.page.room').dispose();
+
+		if ( $('rooms').hasClass('active') ) {
+			$$('#submenu a').dispose();
+			$('submenu').fade('out');
+			menu.showPage('rooms');
+		}
+	},
 	add: function(uuid,data) {
 		var temp = new Object();
 		temp["0"] = data.name;
@@ -17,6 +29,7 @@ room = {
 		if ( $(uuid) != undefined ) {
 			$(uuid).dispose();
 		}
+		$$('#submenu #'+uuid).dispose();
 	},
 	render:function(uuid) {
 		if ( $('page_'+uuid).getElement('h1') == undefined ) {

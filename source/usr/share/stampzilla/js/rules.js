@@ -1,5 +1,9 @@
 rules = {
 	data: new Object(),
+	clear: function() {
+		rules.data = new Object();
+		$('rules').innerHTML = '';
+	},
 	add: function(key,data) {
 		rules.data[key] = data;
 		rules.render(key);
@@ -36,6 +40,9 @@ rules = {
 
 		$('rules').getElement('#rule_'+key+' .conditions').innerHTML = '';
 		for( uuid in rule.conditions ) {
+			if ( typeof rule.conditions[uuid] === 'function' ) {
+				continue;
+			}
 			$('rules').getElement('#rule_'+key+' .conditions').innerHTML = uuid+': '+rule.conditions[uuid];
 		}
 	}

@@ -2,7 +2,7 @@
 communicationReady = function(){
 	sendJSON("type=hello");
 	//Fetch a list of all rooms from logic deamon
-	sendJSON("to=logic&cmd=state");
+	//sendJSON("to=logic&cmd=state");
 	setTimeout(scrollTo, 0, 0, 1);
 }
 
@@ -21,10 +21,15 @@ incoming = function( json ) {
 		switch( pkt.cmd ) {
 			case 'greetings':
 				settings.addComponent(pkt.from,pkt.class,pkt.settings);
+				settings.updateState(pkt.from,pkt.state);
 
 				for (c in pkt.class) {
 					if ( pkt.class[c] == 'video.player' ) {
 						video.addPlayer(pkt.from);
+					}
+
+					if ( pkt.class[c] == 'logic' ) {
+						sendJSON("to="+pkt.from+"&cmd=state");
 					}
 				}
 
@@ -103,6 +108,11 @@ incoming = function( json ) {
 			case 'bye':
 				settings.removeComponent(pkt.from);
 				video.removePlayer(pkt.from);
+				if ( pkt.from == 'logic' ) {
+					room.clear();
+					rules.clear();
+					schedule.clear();
+				}
 				break;
 		}
 	}

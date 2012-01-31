@@ -31,9 +31,22 @@ class logic extends component {
 
         $this->_load('rooms');
         $this->_load('rules');
+        $this->_load('schedule');
+
+		$this->broadcast(array(
+			'type' => 'hello'
+		));
     }
 
 	function event($pkt) {
+
+		if ( isset($pkt['cmd']) && $pkt['cmd'] == 'greetings' && isset($pkt['state']) ) {
+			$this->state[$pkt['from']] = $pkt['state'];
+			$this->broadcast( array(
+				'type' => 'state',
+				'data' => $this->state
+			));
+		}
 
 		if ( isset($pkt['type']) && $pkt['type'] == 'state' ) {
 			$this->state[$pkt['from']] = $pkt['data'];

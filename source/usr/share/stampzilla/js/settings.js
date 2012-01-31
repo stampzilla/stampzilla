@@ -1,6 +1,10 @@
 settings = {
 	trees: {},
 	addComponent:function(name,classes,settings) {
+		if ( classes[0] == 'commander' ) {
+			return false;
+		}
+
 		if ( $('component_'+name) == undefined ) {
 			s = '';
 
@@ -107,7 +111,10 @@ settings = {
 			if ( typeof data[row] === 'object' ) {
 				this.readTree(node, data[row]);
 			} else {
-				node.text = row + ' - ' + data[row];
+				if ( node.text != row + ' - ' + data[row] ) {
+					node.text = row + ' - ' + data[row];
+					node.invalidated = true;
+				}
 			}
 		}
 
