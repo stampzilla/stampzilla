@@ -91,7 +91,7 @@ function command($cmd,$pwd = '',$args=array()) {
 
             if ( ($active = listActive()) ) {
                 require_once('../lib/udp.php');
-                $udp = new udp('0.0.0.0',8282);
+				$udp = new udp('0.0.0.0','255.255.255.255',8282);
                 foreach( $active as $line ) {
                     $node = str_replace('.php','',trim(substr(ltrim($line['file'],'\_'),4)));
                     if ( !isset($p[1]) || str_replace('.php','',$p[1]) == $node ) {

@@ -30,7 +30,82 @@ class logic extends component {
         }
 
         $this->_load('rooms');
+        $this->_load('rules');
     }
+
+	function event($pkt) {
+
+		if ( isset($pkt['type']) && $pkt['type'] == 'state' ) {
+			$this->state[$pkt['from']] = $pkt['data'];
+			$this->broadcast( array(
+				'type' => 'state',
+				'data' => $this->state
+			));
+		}
+
+		if ( isset($pkt['cmd']) && $pkt['cmd'] == 'bye' ) {
+			unset($this->state[$pkt['from']]);
+			$this->broadcast( array(
+				'type' => 'state',
+				'data' => $this->state
+			));
+		}
+
+		if ( !isset($pkt['to']) )
+			return;
+
+		foreach( $this->rules as $key => $line ) {
+			if ( $pkt['to'] == $line['trigger']['component'] ) {
+				note(debug,'Testing rule '.$key );
+				if ( $this->testEvent($pkt,$line) ){
+					note(notice,'Triggerd rule '.$key );
+					$this->triggerEvent($pkt,$line);
+
+					if ( $line['trigger']['component'] == 'logic' ) {
+						return true;
+					}
+
+					break;
+				}
+			}
+		}
+	}
+
+	function testEvent($pkt,$rule) {
+		// Check trigger conditions
+		foreach($rule['trigger'] as $key => $value) {
+			if ( $key == 'component' )
+				continue;
+
+			if ( !isset($pkt[$key]) || $pkt[$key] != $value ) {
+				note(debug,'Failed testing on field '.$key );
+				return false;
+			}
+		}
+
+		// Check external conditions
+		if ( is_array($rule['conditions']) )
+			foreach($rule['conditions'] as $uuid => $condition) {
+				note(debug,'Failed testing on condition '.$uuid );
+				return false;
+			}
+
+		return true;
+	}
+
+	function triggerEvent($pkt,$rule) {
+		foreach($rule['actions'] as $key => $line) {
+			$this->broadcast($line);
+		}
+	}
+
+	function state($pkt) {
+		return array(
+			'rooms' => $this->rooms,
+			'rules' => $this->rules,
+			'schedule' => $this->schedule,
+		);
+	}
 
     function rooms($pkt) {
         return $this->rooms;

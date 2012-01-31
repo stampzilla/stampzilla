@@ -1,5 +1,5 @@
 <?php
 
-exec("stampzilla send \"".addslashes(http_build_query($_GET))."\"");
+passthru("stampzilla send -o \"".addslashes(http_build_query($_GET))."\"");
 
 ?>

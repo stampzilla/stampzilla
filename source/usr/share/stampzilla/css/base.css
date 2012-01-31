@@ -341,6 +341,7 @@ iframe {
 	-webkit-border-radius:5px;
 	text-align:center;
 	overflow:hidden;
+	opacity:0.8;
 }
 
 .page.room .button .handle {

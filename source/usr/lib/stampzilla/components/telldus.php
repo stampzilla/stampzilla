@@ -88,9 +88,7 @@ class telldus extends component {
     }
 
     function send_state() {
-        $this->broadcast(array(
-            'state' => $this->dev
-        ));
+		$this->setState('devices',$this->dev);
     }
 }
 

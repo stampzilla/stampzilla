@@ -1,45 +1,24 @@
 <?php
 
-$fromweb=0;
-if( (isset($_SERVER['argv'][2]) && $_SERVER['argv'][2]=='fromweb') || isset($_SERVER['QUERY_STRING']) ){
-    $fromweb=1;
-    set_time_limit(2);
-}
-if ( isset($_SERVER['argv'][1]) ) {
-    parse_str($_SERVER['argv'][1],$temp1);
-    if($temp1)
-        $_GET=$temp1;
-    else
-        trigger_error('Syntax error on message: "'.$_SERVER['argv'][1].'"',E_USER_ERROR);
-}
-    
-if ( $fromweb ) {
-    ob_start();
-    define('quiet',true);
-    define('makelog',true);
-    define('nolog',true);
-}
-
 $start = microtime(true);
 require_once '../lib/component.php';
+require_once "../lib/functions.php";
 
-$data = array(
-    'success' => false,
-    'timeout' => false
-);
+$args = arguments($_SERVER['argv']);
+parse_str($args['arguments'][0],$_GET);
+
+if ( in_array('o',$args['flags']) ) {
+	ob_start();
+}
+
 
 class sender extends component{
 	protected $componentclasses = array('commander');
-    function json( ) {
-        global $log,$data;
-
-        $data = array_merge($data,array(
-            'log' => $log
-        ));
-        ob_end_clean();
-        echo json_encode($data);
-        die();
-    }
+	public $answerd = false;
+	public $data = array(
+		'success' => false,
+		'timeout' => true
+	);
 
     function event($pkt) {
         global $start,$data;
@@ -53,6 +32,9 @@ class sender extends component{
 
         if( $pkt['to'] = $this->peer && $pkt['msg'] = $this->msg && isset($pkt['cmd']) ) {
             if ( $pkt['cmd'] == 'ack' ) {
+				$this->answerd = true;
+				$this->data['success'] = true;
+				$this->data['timeout'] = false;
                 note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
                 note(debug,'Success!');
 
@@ -60,40 +42,28 @@ class sender extends component{
                     $data['answer'] = $pkt['answer'];
                 }
 
-                if ( $this->fromweb ) {
-                    global $data;
-                    $data['success'] = true;
-                    if ( isset($pkt['ret']) )
-                        $data['ret'] = $pkt['ret'];
-                    die();
-                } else {
-                    echo json_format(json_encode($pkt['ret']))."\n";
-                    posix_kill($this->child_pid, SIGTERM);
-                    die();
-                }
+				echo json_format(json_encode($pkt['ret']))."\n";
+				posix_kill($this->child_pid, SIGTERM);
+				die();
             } elseif( $pkt['to'] = $this->peer && $pkt['cmd'] == 'nak' && $pkt['msg'] = $this->msg ) {
+				$this->data['success'] = false;
+				$this->data['timeout'] = false;
                 note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
                 note(error,'Failed to execute command!');
 
-                if ( $this->fromweb ) {
-                    die();
-                } else {
-                    posix_kill($this->child_pid, SIGTERM);
-                    die();
-                }
-            } 
-            elseif($pkt['cmd'] == 'timeout'){
-                $data['success'] = false;
-                $data['timeout'] = true;
-                note('Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
-                note(error,'Timeout recieved!');
-                die();
+				posix_kill($this->child_pid, SIGTERM);
+				die();
             }
         }
     }
 
     function send() {
-            $this->msg( $_GET );
+		if ( !$_GET ) {
+        	note(error,'No send argument defined!');
+			die();
+		}
+
+    	$this->msg( $_GET );
     }
 
     function msg( $msg ) {
@@ -105,30 +75,41 @@ class sender extends component{
     }
 
     function checkTimeout() {
-        global $start;
+        global $start,$c;
         sleep(2);
+		$c->broadcast(array(
+			'cmd' => 'nak',
+			'pkt' => $_GET
+		));
         note(debug,'Total time: '.round((microtime(true)-$start)*1000,1).'ms' );
         note(error,'Timeout reached ('.round((microtime(true)-$start)*1000,1).'ms)!');
         posix_kill($this->parent_pid, SIGTERM);
         die();
     }
+
+	function __destruct() {
+		if ( !$this->answerd ) {
+			$this->broadcast(array(
+				'cmd' => 'nak',
+				'pkt' => $_GET
+			));
+		}
+	
+		global $args;
+
+		if ( in_array('o',$args['flags']) ) {
+			$this->data = array_merge($this->data,array(
+    	        'log' => ob_get_contents()
+        	));
+	        ob_end_clean();
+    	    echo json_encode($this->data);
+		}
+	}
 }
 
 $c = new sender();
 $c->peer = md5(mt_rand(0, 32) . time());
-$c->fromweb = $fromweb;
 $c->send();
 
-if ( !$fromweb ) {
-    $c->start('','checkTimeout');
-} else {
-    function shutdown() {
-        global $c,$start,$data;
-        $data['time'] = round((microtime(true)-$start)*1000,1);
-        $c->json();
-    }
-
-    register_shutdown_function('shutdown');
-    $c->start();
-}
+$c->start('','checkTimeout');
 ?>

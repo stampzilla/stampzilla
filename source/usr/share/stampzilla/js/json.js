@@ -2,7 +2,7 @@
 communicationReady = function(){
 	sendJSON("type=hello");
 	//Fetch a list of all rooms from logic deamon
-	sendJSON("to=logic&cmd=rooms");
+	sendJSON("to=logic&cmd=state");
 	setTimeout(scrollTo, 0, 0, 1);
 }
 
@@ -32,22 +32,28 @@ incoming = function( json ) {
 			case 'ack':	
 				room.ack( pkt );
 				switch( pkt.pkt.cmd ) {
-					case 'rooms':
-						if ( editmode.active ) {
-							break;
-						}
-						for(var prop in pkt.ret) {
-							room.add(prop,pkt.ret[prop]);
-						}
-						if ( location.hash > '' ) {
-							menu.showPage(location.hash.substring(1,location.hash.length));
-						}
-						//menu.main($('rooms'));
-						//alert(JSON.stringify(menu.layout.rooms));
-						break;
 					case 'state':
-						if ( pkt.ret.paused != undefined ) {
-							video.setState(pkt.from,pkt.ret);
+						switch( pkt.from ) {
+							case "logic":
+								if ( !editmode.active ) {
+									for(var prop in pkt.ret.rooms) {
+										room.add(prop,pkt.ret.rooms[prop]);
+									}
+									if ( location.hash > '' ) {
+										menu.showPage(location.hash.substring(1,location.hash.length));
+									}
+								}
+								for(var prop in pkt.ret.rules) {
+									rules.add(prop,pkt.ret.rules[prop]);
+								}
+								for(var prop in pkt.ret.schedule) {
+									schedule.add(prop,pkt.ret.schedule[prop]);
+								}
+							case "xbmc":
+								if ( pkt.ret.paused != undefined ) {
+									video.setState(pkt.from,pkt.ret);
+								}
+								break;
 						}
 						break;
 					case 'media':
@@ -103,6 +109,9 @@ incoming = function( json ) {
 	// Types
 	if ( pkt.type != undefined ) {
 		switch( pkt.type ) {
+			case 'state':
+				settings.updateState(pkt.from,pkt.data);
+				break;
 			case 'event':
 				switch(pkt.event) {
 					case 'state':

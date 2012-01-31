@@ -11,6 +11,7 @@ class component {
     private $child = 0;
     private $pid = 0;
 	private $died = false;
+	public $state = array();
 
     function __construct() {
         // Load network config
@@ -160,6 +161,39 @@ class component {
         ));
     }
 
+	function getState( $pkt ) {
+		return $this->state;
+	}
+
+	function setState() {
+		switch( func_num_args() ) {
+			case 1:
+				$list = func_get_args();
+				if ( is_array($list[0]) ) {
+					foreach($list[0] as $key => $line)
+						$this->setStatePath($key,$line);
+				}
+				break;
+			case 2:
+				list($key,$value) = func_get_args();
+				$this->setStatePath($key,$value);
+				break;
+		}
+
+		$this->state['node']['memory'] = memory_get_usage();
+
+		$this->broadcast( array(
+			'type' => 'state',
+			'data' => $this->state
+		));
+	}
+
+	function setStatePath( $path, $value ) {
+		$path = explode('.',$path);
+		$path = '["'.implode($path,'"]["').'"]';
+		eval( "\$this->state$path = '$value';" );
+	}
+
     function bye(){
 	    $this->broadcast(array(
             'cmd' => 'bye'
@@ -232,8 +266,18 @@ class component {
 
         note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
 			
+		// Say hello to the network
+		$this->greetings();
+
 		// Try to read settings
 		$this->read_settings();
+
+		$this->setState(
+			array(
+				'node.started' => date('Y-m-d H:i:s'),
+				'node.pid' => posix_getpid()
+			)
+		);
 
 		if ( is_callable(array($this,'startup')) )
 			$this->startup();
@@ -257,6 +301,7 @@ class component {
 
         if ( $this->child_pid ) {
 
+			// If child is alive
             if(isset($sockets[0])){
                 // Add an signal handler so the child can notify the parent when there are new intercom data
                 pcntl_signal( SIGALRM,array($this,'recive_intercom') );
@@ -268,11 +313,9 @@ class component {
 
                 // Save the intercom socket, and close the other
                 $this->intercom_socket = $sockets[0]; // Reader
-            }
 
-			// Say hello to the network
-			if ( !isset($hashed) )
-				$this->greetings();
+				$this->setState('node.child',$this->child_pid);
+			}
 
 			// Parent
 			note( debug, "Starting parent loop" );

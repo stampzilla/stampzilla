@@ -19,9 +19,12 @@ room = {
 		}
 	},
 	render:function(uuid) {
-		document.title = $('page_'+uuid).getElement('h1');
 		if ( $('page_'+uuid).getElement('h1') == undefined ) {
-			//$('page_'+uuid).innerHTML += '<div class="title">'+room.rooms[uuid].name+'</div>';
+			el = new Element('h1', {
+				class: 'title'
+			});
+			el.innerHTML = room.rooms[uuid].name;
+			$('page_'+uuid).adopt(el);
 		} else {
 			$('page_'+uuid).getElement('h1').innerHTML = room.rooms[uuid].name;
 		}

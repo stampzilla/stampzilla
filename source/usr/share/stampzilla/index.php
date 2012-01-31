@@ -46,7 +46,16 @@ $layout = array(
 		0 => 'Consumption'
 	),
 	'settings' => array(
-		0 => 'Settings'
+		0 => 'Settings',
+		'rules' => array(
+			0 => 'Rules'
+		),
+		'schedule' => array(
+			0 => 'Schedule'
+		),
+		'components' => array(
+			0 => 'Components'
+		)
 	)
 );
 
@@ -70,6 +79,7 @@ $layout = array(
 
         <link href="css/base.css" rel="stylesheet" />
         <link href="css/editmode.css" rel="stylesheet" />
+        <link href="css/mootree.css" rel="stylesheet" />
         <link rel="stylesheet" media="all and (orientation:portrait)" href="css/portrait.css">
         <link rel="stylesheet" media="all and (orientation:landscape)" href="css/landscape.css">
         <script language="javascript">

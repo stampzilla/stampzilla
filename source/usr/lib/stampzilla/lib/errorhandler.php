@@ -12,7 +12,7 @@ if ( isset($_SERVER['argv']) ) {
 
 require_once "constants.php";
 
-$lastprint = time();
+$lastprint = 0;
 
 class errorhandler {
     static function error( $no, $text, $file, $line, $context ) {
@@ -84,11 +84,21 @@ class errorhandler {
             printout("\033[1;31mJSON     ".errorhandler::currentTime()." PKT ".$pkt['from']." (".trim($raw).") \n\033[0m");
     }
 
-    static function currentTime() {
-        $utimestamp = microtime(true);
-        $timestamp = floor($utimestamp);
-        $milliseconds = round(($utimestamp - $timestamp) * 1000000);
-        return date('Y-m-d H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
+    static function currentTime($full = false) {
+		global $headprint;
+
+		if ( $full ) 
+    	    return date('Y-m-d H:i:s');
+		else {
+
+			$utimestamp = microtime(true) - $headprint;
+			$timestamp = floor($utimestamp);
+			$milliseconds = round(($utimestamp - $timestamp) * 1000000);
+
+			return str_pad($timestamp,3,' ',STR_PAD_LEFT)."s ".str_pad($milliseconds,6,' ',STR_PAD_LEFT)."us";
+
+	        return date('H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
+		}
     }
 }
 
@@ -106,10 +116,11 @@ function note($level,$text) {
 }
 
 function printout( $text ) {
-	global $lastprint;
+	global $lastprint,$headprint;
 
 	if ( time() - $lastprint > 2 ) {
-		echo "\n------------------------------\n";
+		echo "\n----[ ".errorhandler::currentTime(true)." ]--------------------------\n";
+		$headprint = microtime(true);
 	}
 	$lastprint = time();
 
