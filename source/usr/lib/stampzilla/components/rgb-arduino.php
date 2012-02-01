@@ -39,6 +39,8 @@ class rgb extends component {
             fwrite($this->t,chr($r).chr($g).chr($b));
             return true;
         }
+
+        return false;
     }
 
     function reset($pkt) {
