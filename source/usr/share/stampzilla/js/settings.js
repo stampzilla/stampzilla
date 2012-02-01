@@ -101,7 +101,7 @@ settings = {
 			}
 		
 			if ( node == undefined ) {
-				node = p.insert({text:row,data:{key:row,valid:true}});
+				node = p.insert({text:row,data:{key:row,valid:true},onClick:function() {this.toggle();} });
 			}
 
 			if ( typeof data[row] === 'object' ) {
