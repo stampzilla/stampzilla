@@ -26,8 +26,8 @@ class beckhoff extends component {
 			}
     }
 
-	function test($pkt) {
-		$this->write('.Interface.Yoda.Roof',0,$pkt);
+	function set($pkt) {
+		$this->write('.Interface.'.$pkt['tag'],$pkt['value'],$pkt);
 	}
 
 	function write($tag,$value,$ack=null){
