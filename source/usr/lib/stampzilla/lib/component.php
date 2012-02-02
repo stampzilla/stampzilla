@@ -169,7 +169,7 @@ class component {
 		switch( func_num_args() ) {
 			case 1:
 				$list = func_get_args();
-				if ( is_array($list[0]) ) {
+				if ( is_array($list[0]) || is_object($list[0]) ) {
 					foreach($list[0] as $key => $line)
 						$this->setStatePath($key,$line);
 				}
@@ -179,8 +179,14 @@ class component {
 				$this->setStatePath($key,$value);
 				break;
 		}
+		$this->sendState();
+	}
 
+	function sendState() {
 		$this->state['node']['memory'] = memory_get_usage();
+
+		/*$data = get_object_vars($this);
+		unset($data['udp']);*/
 
 		$this->broadcast( array(
 			'type' => 'state',
@@ -190,8 +196,21 @@ class component {
 
 	function setStatePath( $path, $value ) {
 		$path = explode('.',$path);
-		$path = '["'.implode($path,'"]["').'"]';
-		eval( "\$this->state$path = \$value;" );
+		$path = array_filter($path, 'strlen'); // Remove empty
+
+		$a = '$this->state';
+		foreach($path as $key => $line) {
+			$a .= '["'.$line.'"]';
+			eval("
+				if ( !isset($a) || !is_array($a) ) {
+					$a = array();
+				}
+			");
+		}
+
+		$string = "$a = \$value;";
+
+		eval($string);
 	}
 
     function bye(){
@@ -216,10 +235,7 @@ class component {
 			'class' => $this->componentclasses,
 			'settings' => $this->settings
 		));
-		$this->broadcast( array(
-			'type' => 'state',
-			'data' => $this->state
-		));
+		$this->sendState();
     }
 
     function broadcast_event( $event,$data=array() ){
@@ -381,7 +397,7 @@ class component {
 
 		// Check if file exists
 		if ( !is_file($file) )
-			return !trigger_error("Config file ($file) is missing!",E_USER_WARNING);
+			return !note(debug,"Config file ($file) is missing!");
 
 		// Try to read the settings file (yml)
 		$data = spyc_load_file($file);
