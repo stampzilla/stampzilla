@@ -346,6 +346,19 @@ iframe {
 	text-align:center;
 	overflow:hidden;
 	opacity:0.8;
+    position:relative;
+}
+
+.page.room .button.active {
+	border:2px solid #5f5;
+}
+
+.page.room .button .state {
+    position:absolute;
+    top:50%;
+    left:0px;
+    width:100%;
+    text-align:center;
 }
 
 .page.room .button .handle {
