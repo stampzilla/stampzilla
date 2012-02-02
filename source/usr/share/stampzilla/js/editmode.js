@@ -194,7 +194,7 @@ var editmode = {
 		$(obj).addClass('saving');
 		$(obj).disabled = true;
 
-		sendJSON('to=logic&cmd=update&id='+obj.id+'&room='+obj.room+'&element=buttons&uuid='+obj.uuid+'&field='+obj.field+'&value='+obj.value);
+		sendJSON('to=logic&cmd=update&id='+obj.id+'&room='+obj.room+'&element=buttons&uuid='+obj.uuid+'&field='+obj.field+'&value='+obj.value.replace('&','%26'));
 
 		return true;
 	},

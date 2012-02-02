@@ -44,7 +44,7 @@ class telldus extends component {
             if ( substr($line[2],0,7) == 'DIMMED:' )
                 $status = substr($line[2],7);
 
-            $this->dev[] = array(
+            $this->dev[$line[0]] = array(
                 'id' => $line[0],
                 'name' => $line[1],
                 'status' => $status,
@@ -54,9 +54,17 @@ class telldus extends component {
         return $this->dev;
     }
 
+    function toggle($pkt) {
+        if ( $this->state[$pkt['id']]['status'] > 0 ) {
+            return $this->reset($pkt);
+        }
+
+        return $this->set($pkt);
+    }
+
     function set($pkg) {
         $res = $this->exec("tdtool --on ".$pkg['id']);
-        $this->dev[$pkg['id']] = 255;
+        $this->dev[$pkg['id']]['status'] = 255;
         $this->send_state();
 
         print_r($res);
@@ -66,7 +74,7 @@ class telldus extends component {
     }
     function reset($pkg) {
         $res = $this->exec("tdtool --off ".$pkg['id']);
-        $this->dev[$pkg['id']] = 0;
+        $this->dev[$pkg['id']]['status'] = 0;
         $this->send_state();
 
         if ( strpos($res[0],'Success') )
@@ -76,7 +84,7 @@ class telldus extends component {
     function dim($pkg) {
         $value = round($pkg['value']*(255/100));
         $res = $this->exec("tdtool -v ".$value." -d ".$pkg['id']);
-        $this->dev[$pkg['id']] = $value;
+        $this->dev[$pkg['id']]['status'] = $value;
         $this->send_state();
 
         if ( strpos($res[0],'Success') )
@@ -88,13 +96,50 @@ class telldus extends component {
     }
 
     function send_state() {
-		$this->setState('devices',$this->dev);
+        $this->setState($this->dev);
+    }
+    function intercom_event($cmd){
+        note(notice,'R: '.$cmd);
+        $temp = explode(';',$cmd);
+        foreach($temp AS $key=>$val){
+            $t = explode(':',$val);
+            if(isset($t[1]))
+                $temp[$t[0]] = $t[1];
+            unset($temp[$key]);
+        }
+        if(isset($temp['type']) && $temp['type'] == 'temperature'){
+            file_put_contents('/tmp/temperature', $temp['temp']);
+            $this->setState('temp',$temp['temp']);
+        }
+
+        note(notice,print_r($temp,1));
+    }
+    function _child() {
+        $this->socket = stream_socket_client('unix:///tmp/TelldusEvents');
+        $this->tmpTemperatureFile = '/tmp/temperature';
+        $templast = '';
+        $start = microtime(true);
+        while(1){
+            if( false == ($temporg = stream_socket_recvfrom($this->socket,1024))){
+                $this->intercom(array('error'=>'Died in child','status'=>'died'));
+                echo "died in child";
+                die();
+            }
+            $now = microtime(true);
+            if($templast == $temporg && (($now-$start) < 1))
+                continue;
+            $templast = $temporg;
+            $start = microtime(true);
+            $this->intercom(trim($temporg));
+
+        }
+
     }
 }
 
 
 $t = new telldus();
-$t->start('telldus');
+$t->start('telldus','_child');
 
 
 ?>
