@@ -191,7 +191,7 @@ class component {
 	function setStatePath( $path, $value ) {
 		$path = explode('.',$path);
 		$path = '["'.implode($path,'"]["').'"]';
-		eval( "\$this->state$path = '$value';" );
+		eval( "\$this->state$path = \$value;" );
 	}
 
     function bye(){
@@ -215,6 +215,10 @@ class component {
 			'cmd' => 'greetings',
 			'class' => $this->componentclasses,
 			'settings' => $this->settings
+		));
+		$this->broadcast( array(
+			'type' => 'state',
+			'data' => $this->state
 		));
     }
 

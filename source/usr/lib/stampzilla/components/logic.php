@@ -250,9 +250,13 @@ class logic extends component {
     }
 
     function _load($file) {
-        $this->$file = spyc_load_file('/var/spool/stampzilla/'.$file.'.yml');
+        if(is_file('/var/spool/stampzilla/'.$file.'.yml')){
+            $this->$file = spyc_load_file('/var/spool/stampzilla/'.$file.'.yml');
+            return isset($this->$file);
+        }
 
-        return isset($this->$file);
+        $this->$file = array();
+        return array();
     }
 
     function schedule($pkt) {

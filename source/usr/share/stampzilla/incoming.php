@@ -27,7 +27,7 @@ class logger {
 			if ( !$pkt = $this->udp->listen() )
 				continue;
 
-            $p = json_encode($pkt);
+            $p = json_encode($pkt,JSON_FORCE_OBJECT);
 			// Format message
 			$msg = "\n".$p.'<br /><script language="javascript">parent.incoming("'.addslashes($p).'");window.scroll(0,999999999);</script>';
 
