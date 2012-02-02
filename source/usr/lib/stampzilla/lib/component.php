@@ -196,8 +196,21 @@ class component {
 
 	function setStatePath( $path, $value ) {
 		$path = explode('.',$path);
-		$path = '["'.implode($path,'"]["').'"]';
-		eval( "\$this->state$path = \$value;" );
+		$path = array_filter($path, 'strlen'); // Remove empty
+
+		$a = '$this->state';
+		foreach($path as $key => $line) {
+			$a .= '["'.$line.'"]';
+			eval("
+				if ( !isset($a) || !is_array($a) ) {
+					$a = array();
+				}
+			");
+		}
+
+		$string = "$a = \$value;";
+
+		eval($string);
 	}
 
     function bye(){
