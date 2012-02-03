@@ -42,7 +42,7 @@ room = {
     renderStates:function() {
         buttons = $$('.room .button');
         for( button in buttons ) {
-            if ( buttons[button].data == undefined ) {
+            if ( buttons[button].data == undefined || buttons[button].data.state == undefined) {
                 continue;
             }
 
@@ -116,7 +116,9 @@ room = {
                 el.uuid = button;
                 el.data.position = el.data.position.split(',');
                 el.getElement('.head').innerHTML = el.data.title;
-                el.getElement('.state').innerHTML = 'UNKNOWN';
+				if ( el.data.state != undefined ) {
+	                el.getElement('.state').innerHTML = 'UNKNOWN';
+				}
                 el.onclick = function() {room.button(this)};
             }
         }

@@ -1,16 +1,22 @@
 <style>
 body {
-	background:#000;
-	color:#fff;
-	white-space:nowrap;
+       background:#000;
+       color:#fff;
+       white-space:nowrap;
 }
 </style>
 <?php
+
+ob_start();
 
 require "/usr/lib/stampzilla/lib/constants.php";
 require "/usr/lib/stampzilla/lib/udp.php";
 
 $logger = new logger();
+
+echo str_pad($msg,4096,' ',STR_PAD_LEFT);
+ob_flush();
+flush();
 
 class logger {
 	function __construct() {
@@ -22,8 +28,10 @@ class logger {
         ob_flush();
         flush();
 
-		while(1) {
+
+		while (true) {
 			$this->parent++;
+
 			if ( !$pkt = $this->udp->listen() )
 				continue;
 

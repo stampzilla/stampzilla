@@ -171,8 +171,14 @@ class component {
 
         $a = '$this->state';
         foreach($path as $key => $line) {
-            $a .= '["'.$line.'"]';
+			if ( eval("return is_object($a);") ) {
+	            $a .= '->'.$line;
+			} else {
+	            $a .= '["'.$line.'"]';
+			}
         }
+
+		print_r($a);
 
         return eval("
             if ( isset($a) ) {

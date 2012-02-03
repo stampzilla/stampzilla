@@ -24,6 +24,10 @@ class beckhoff extends component {
             }
     }
 
+	function toggle($pkt) {
+		$this->write('.Interface.'.$pkt['tag'],!$this->readState($pkt['tag']),$pkt);
+	}
+
 	function set($pkt) {
 		$this->write('.Interface.'.$pkt['tag'],$pkt['value'],$pkt);
 	}
