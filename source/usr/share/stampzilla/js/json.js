@@ -12,9 +12,9 @@ sendJSON = function(url) {
     }).send();
 }
 
-incoming = function( json ) {
+incoming = function( pkt ) {
     //$('page_rooms').innerHTML += "<br><br><br>"+json;
-    pkt = eval('('+json+')');
+    //pkt = eval('('+json+')');
 
     // Coomands
     if ( pkt.cmd != undefined ) {

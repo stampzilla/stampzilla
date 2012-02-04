@@ -53,7 +53,7 @@ func main(){
 
 func handleJSON(conn *net.UDPConn) {
 
-	var buf [512]byte
+	var buf [10485]byte
 
 	// Read in the message to the buffer 
 	_, _, err := conn.ReadFromUDP(buf[0:])
@@ -137,13 +137,13 @@ func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {
 	// Wait for a message or timeout
 	select {
 		case msg := <-channel:
-			io.WriteString(w, msg)
+			io.WriteString(w, "window.sape.recive("+msg+");")
 		case <-timeout:
 			return
 	}
 }
 
 func checkTimeout (timeout chan bool) {
-	time.Sleep(60e9) // 60 sec, (usec)
+	time.Sleep(5e9) // 60 sec, (usec)
 	timeout <- true // Send timeout
 }

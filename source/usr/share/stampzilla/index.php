@@ -140,7 +140,10 @@ $layout = array(
 				setTimeout(function() { window.scrollTo(0, 1); }, 1000);
 				updateClock();
 				makeFastOnClick();
-				$('iframe').src="incoming.php";
+				//$('iframe').src="incoming.php";
+
+				test = new sape({});
+				test.connect('http://loke:12345/');
 
 				if ( location.hash > '' ) {
 					menu.showPage(location.hash.substring(1,location.hash.length));
