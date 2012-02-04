@@ -60,6 +60,7 @@ room = {
             	root = buttons[button].data.state.split('<');
 				path = root[0].split('.');
 			} else {
+				root = buttons[button].data.state;
 				path = root.split('.');
 			}
 
