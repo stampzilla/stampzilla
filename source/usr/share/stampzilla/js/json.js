@@ -73,7 +73,7 @@ incoming = function( json ) {
                         break;
                     case 'update':
                         editmode.save_success(
-                            pkt.pkt.id,
+                            pkt.pkt.kqid,
                             pkt.ret.value
                         );
                         break;

@@ -46,11 +46,24 @@ room = {
                 continue;
             }
 
-            root = buttons[button].data.state.split('=');
-            path = root[0].split('.');
+			mode = '';
+			if ( buttons[button].data.state.indexOf('=') != -1 ) {
+				mode = '=';
+            	root = buttons[button].data.state.split('=');
+				path = root[0].split('.');
+			} else if ( buttons[button].data.state.indexOf('>') != -1 ) {
+				mode = '>';
+            	root = buttons[button].data.state.split('>');
+				path = root[0].split('.');
+			} else if ( buttons[button].data.state.indexOf('<') != -1 ) {
+				mode = '<';
+            	root = buttons[button].data.state.split('<');
+				path = root[0].split('.');
+			} else {
+				path = root.split('.');
+			}
 
-            node = path[0];
-
+			node = path[0];
             delete path[0];
             p = '';
             for( key in path ) {
@@ -66,14 +79,25 @@ room = {
                     p += '.'+n;
                 }
 
-
                 eval("if ( this.states[node]"+p+" == undefined ) {this.states[node]"+p+" = {};}");
             }
 
 
-            if ( root[1] != undefined ) {
-                eval("if (this.states[node]"+p+"==root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
-                buttons[button].getElement('.state').innerHTML = '';
+            if ( mode != '' ) {
+				switch (mode) {
+					case '=':
+		                eval("if (this.states[node]"+p+"==root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+    		            buttons[button].getElement('.state').innerHTML = '';
+						break;
+					case '>':
+		                eval("if (this.states[node]"+p+">root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+    		            buttons[button].getElement('.state').innerHTML = '';
+						break;
+					case '<':
+		                eval("if (this.states[node]"+p+"<root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+    		            buttons[button].getElement('.state').innerHTML = '';
+						break;
+				}
             } else {
                 eval("buttons[button].getElement('.state').innerHTML = this.states[node]"+p+";");
             }

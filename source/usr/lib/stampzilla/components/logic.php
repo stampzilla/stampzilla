@@ -186,24 +186,24 @@ class logic extends component {
     }
 
     function update($pkt) {
-        $pkt['value'] = str_replace('px','',$pkt['value']);
+        $pkt['kqvalue'] = str_replace('px','',$pkt['kqvalue']);
 
-        if ( !isset($this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']][$pkt['field']]) ) 
-            return $this->nak($pkt,array('msg' => 'Field "'.$pkt['field'].'" do not exists!','value'=>''));
+        if ( !isset($this->rooms[$pkt['kqroom']][$pkt['kqelement']][$pkt['kquuid']][$pkt['kqfield']]) ) 
+            return $this->nak($pkt,array('msg' => 'Field "'.$pkt['kqfield'].'" do not exists!','value'=>''));
 
-        $this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']][$pkt['field']] = $pkt['value'];
+        $this->rooms[$pkt['kqroom']][$pkt['kqelement']][$pkt['kquuid']][$pkt['kqfield']] = $pkt['kqvalue'];
 
         $this->broadcast(array(
             'type' => 'event',
             'event' => 'roomUpdate',
-            'uuid' => $pkt['room'],
-            'data' => $this->rooms[$pkt['room']]
+            'uuid' => $pkt['kqroom'],
+            'data' => $this->rooms[$pkt['kqroom']]
         ));
 
-        note(notice,"Value updated for room {$pkt['room']} > {$pkt['element']}({$pkt['uuid']}) {$pkt['field']} = {$pkt['value']}");
+        note(notice,"Value updated for room {$pkt['kqroom']} > {$pkt['kqelement']}({$pkt['kquuid']}) {$pkt['kqfield']} = {$pkt['kqvalue']}");
         $this->_save('rooms');
 
-        return $this->ack($pkt,array('value'=>$pkt['value']));
+        return $this->ack($pkt,array('value'=>$pkt['kqvalue']));
     }
 
     function create($pkt) {
