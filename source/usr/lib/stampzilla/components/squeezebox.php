@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 require_once "../lib/component.php";
@@ -29,8 +30,7 @@ class squeezebox extends component {
     protected $commands = array(
         'next' => 'Next song.',
         'prev' => 'Previous song.',
-        'on' => 'Turn on player',
-        'off' => 'Turn off player',
+        'power' => 'Power 1 or 0',
         'play' => 'Start playing',
         'pause' => 'Pause playback',
         'stop' => 'Stop playback',
@@ -83,11 +83,10 @@ class squeezebox extends component {
     function pause($pkt){
         return $this->send($this->nameToMac($pkt['id']).' pause');
     }
-    function off($pkt){
-        return $this->send($this->nameToMac($pkt['id']).' power 0');
-    }
-    function on($pkt){
-        return $this->send($this->nameToMac($pkt['id']).' power 1');
+    function power($pkt){
+        if(!isset($pkt['power']))
+            $pkt['power'] = (!$this->state[$pkt['id']]['power'])+0;
+        return $this->send($this->nameToMac($pkt['id']).' power '.$pkt['power']);
     }
 
     function intercom_event($cmd) {

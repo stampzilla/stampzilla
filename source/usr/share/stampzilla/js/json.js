@@ -17,137 +17,149 @@ incoming = function( pkt ) {
     //pkt = eval('('+json+')');
 
     // Coomands
-    if ( pkt.cmd != undefined ) {
-        switch( pkt.cmd ) {
-            case 'greetings':
-                settings.addComponent(pkt.from,pkt.class,pkt.settings);
-                settings.updateState(pkt.from,pkt.state);
+    //$('log').innerHTML = "<b>"+pkt.from+"</b> - "+JSON.stringify(pkt)+"<br><br>"+$('log').innerHTML;
 
-                for (c in pkt.class) {
-                    if ( pkt.class[c] == 'video.player' ) {
-                        video.addPlayer(pkt.from);
-                    }
+    //try{
+        if ( pkt.cmd != undefined ) {
+            switch( pkt.cmd ) {
+                case 'greetings':
+                    settings.addComponent(pkt.from,pkt.class,pkt.settings);
+                    settings.updateState(pkt.from,pkt.state);
 
-                    if ( pkt.class[c] == 'logic' ) {
-                        sendJSON("to="+pkt.from+"&cmd=state");
-                    }
-                }
-
-                break;
-            case 'ack':    
-                room.highlight( pkt );
-                switch( pkt.pkt.cmd ) {
-                    case 'state':
-                        switch( pkt.from ) {
-                            case "logic":
-                                if ( !editmode.active ) {
-                                    for(var prop in pkt.ret.rooms) {
-                                        room.add(prop,pkt.ret.rooms[prop]);
-                                    }
-                                    if ( location.hash > '' ) {
-                                        menu.showPage(location.hash.substring(1,location.hash.length));
-                                    }
-                                }
-                                for(var prop in pkt.ret.rules) {
-                                    rules.add(prop,pkt.ret.rules[prop]);
-                                }
-                                for(var prop in pkt.ret.schedule) {
-                                    schedule.add(prop,pkt.ret.schedule[prop]);
-                                }
-                            case "xbmc":
-                                if ( pkt.ret.paused != undefined ) {
-                                    video.setState(pkt.from,pkt.ret);
-                                }
-                                break;
+                    for (c in pkt.class) {
+                        if ( pkt.class[c] == 'video.player' ) {
+                            video.addPlayer(pkt.from);
                         }
+
+                        if ( pkt.class[c] == 'logic' ) {
+                            sendJSON("to="+pkt.from+"&cmd=state");
+                        }
+                    }
+
+                    break;
+                case 'ack':    
+                    room.highlight( pkt );
+                    if(pkt.pkt == undefined)
                         break;
-                    case 'media':
-                        video.addMedia(pkt.from,pkt.ret.result.movies);
-                        break;
-                    case 'save_setting':
-                        settings.save_success(
-                            pkt.from,
-                            pkt.pkt.key,
-                            pkt.ret.value
-                        );
-                        break;
-                    case 'update':
-                        editmode.save_success(
-                            pkt.pkt.kqid,
-                            pkt.ret.value
-                        );
-                        break;
-                    default:
-                        //alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
-                        break;
-                }
-                break;
-            case 'nak':
-                room.highlight( pkt );
-                switch( pkt.pkt.cmd ) {
-                    case 'save_setting':
-                        settings.save_failed(
-                            pkt.from,
-                            pkt.pkt.key,
-                            pkt.ret.value,
-                            pkt.ret.msg
-                        );
-                        break;
-                    case 'update':
-                        editmode.save_failed(
-                            pkt.pkt.id,
-                            pkt.ret.value,
-                            pkt.ret.msg
-                        );
-                        break;
-                    default:
-                        //alert('NAK from '+pkt.from+' - '+pkt.pkt.cmd);
-                        break;
-                }
-                break;
-            case 'bye':
-                settings.removeComponent(pkt.from);
-                video.removePlayer(pkt.from);
-                if ( pkt.from == 'logic' ) {
-                    room.clear();
-                    rules.clear();
-                    schedule.clear();
-                }
-                break;
+                    switch( pkt.pkt.cmd ) {
+                        case 'state':
+                            switch( pkt.from ) {
+                                case "logic":
+                                    if ( !editmode.active ) {
+                                        for(var prop in pkt.ret.rooms) {
+                                            room.add(prop,pkt.ret.rooms[prop]);
+                                        }
+                                        if ( location.hash > '' ) {
+                                            menu.showPage(location.hash.substring(1,location.hash.length));
+                                        }
+                                    }
+                                case "xbmc":
+                                    if ( pkt.ret.paused != undefined ) {
+                                        video.setState(pkt.from,pkt.ret);
+                                    }
+                                    break;
+                            }
+                            break;
+                        case 'media':
+                            video.addMedia(pkt.from,pkt.ret.result.movies);
+                            break;
+                        case 'save_setting':
+                            settings.save_success(
+                                pkt.from,
+                                pkt.pkt.key,
+                                pkt.ret.value
+                            );
+                            break;
+                        case 'update':
+                            editmode.save_success(
+                                pkt.pkt.id,
+                                pkt.ret.value
+                            );
+                            break;
+                        default:
+                            //alert('ACK from '+pkt.from+' - '+pkt.pkt.cmd);
+                            break;
+                    }
+                    break;
+                case 'nak':
+                    room.highlight( pkt );
+                    switch( pkt.pkt.cmd ) {
+                        case 'save_setting':
+                            settings.save_failed(
+                                pkt.from,
+                                pkt.pkt.key,
+                                pkt.ret.value,
+                                pkt.ret.msg
+                            );
+                            break;
+                        case 'update':
+                            editmode.save_failed(
+                                pkt.pkt.id,
+                                pkt.ret.value,
+                                pkt.ret.msg
+                            );
+                            break;
+                        default:
+                            //alert('NAK from '+pkt.from+' - '+pkt.pkt.cmd);
+                            break;
+                    }
+                    break;
+                case 'bye':
+                    settings.removeComponent(pkt.from);
+                    video.removePlayer(pkt.from);
+                    if ( pkt.from == 'logic' ) {
+                        room.clear();
+                        rules.clear();
+                        schedule.clear();
+                    }
+                    break;
+            }
         }
-    }
-    // Types
-    if ( pkt.type != undefined ) {
-        switch( pkt.type ) {
-            case 'state':
-                settings.updateState(pkt.from,pkt.data);
-                room.updateState(pkt.from,pkt.data);
-                break;
-            case 'event':
-                switch(pkt.event) {
-                    case 'state':
-                        video.setState(pkt.from,pkt.data);
-                        break;
-                    case 'addRoom':
-                        editmode.exit();
+        // Types
+        if ( pkt.type != undefined ) {
+            switch( pkt.type ) {
+                case 'state':
+                    settings.updateState(pkt.from,pkt.data);
+                    room.updateState(pkt.from,pkt.data);
 
-                        room.add(pkt.uuid,pkt.data);
+                    if ( pkt.from == 'logic' ) {
+                        schedule.add(pkt.data.schedule);
+                        $$('.rule').addClass('INVALIDD');
+                        for(var prop in pkt.data.rules) {
+                            rules.add(prop,pkt.data.rules[prop]);
+                            $('rules').getElement('#rule_'+prop).removeClass('INVALIDD');
+                        }
+                        $$('.INVALIDD').dispose();
+                    }
+                    break;
+                case 'event':
+                    switch(pkt.event) {
+                        case 'state':
+                            video.setState(pkt.from,pkt.data);
+                            break;
+                        case 'addRoom':
+                            editmode.exit();
 
-                        menu.sub($('page_'+pkt.uuid));
-                        menu.curSub = '';
+                            room.add(pkt.uuid,pkt.data);
 
-                        //menu.showPage(pkt.uuid);
-                        break;
-                    case 'removeRoom':
-                        editmode.exit();
-                        room.remove(pkt.uuid);
-                        break;
-                    case 'roomUpdate':
-                        room.rooms[pkt.uuid] = pkt.data;
-                        room.render(pkt.uuid);
-                        break;
-                }
-                break;
+                            menu.sub($('page_'+pkt.uuid));
+                            menu.curSub = '';
+
+                            //menu.showPage(pkt.uuid);
+                            break;
+                        case 'removeRoom':
+                            editmode.exit();
+                            room.remove(pkt.uuid);
+                            break;
+                        case 'roomUpdate':
+                            room.rooms[pkt.uuid] = pkt.data;
+                            room.render(pkt.uuid);
+                            break;
+                    }
+                    break;
+            }
         }
-    }
+    /*} catch(er){
+       // alert(er.message);
+    }*/
 }

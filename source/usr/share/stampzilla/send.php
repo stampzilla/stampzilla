@@ -1,5 +1,6 @@
 <?php
 
-passthru("stampzilla send -o \"".addslashes(http_build_query($_GET))."\"");
+chdir("/usr/lib/stampzilla/components");
+passthru("./send.php -o \"".addslashes(http_build_query($_GET))."\"");
 
 ?>

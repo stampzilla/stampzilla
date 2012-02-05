@@ -143,7 +143,7 @@ $layout = array(
 				//$('iframe').src="incoming.php";
 
 				test = new sape({});
-				test.connect('http://loke:12345/');
+				test.connect('http://'+window.location.hostname+':12345/');
 
 				if ( location.hash > '' ) {
 					menu.showPage(location.hash.substring(1,location.hash.length));

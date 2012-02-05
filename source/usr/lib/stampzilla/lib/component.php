@@ -11,9 +11,11 @@ class component {
     private $child = 0;
     private $pid = 0;
     private $died = false;
+    private $hashed = false;
     public $state = array();
 
-    function __construct() {
+// STARTUP
+    function __construct() {/*{{{*/
         // Load network config
 
         $this->network = spyc_load_file('/etc/stampzilla/network.yml');
@@ -28,305 +30,34 @@ class component {
         $this->udp = new udp($this->network['listen'],$this->network['broadcast'],$this->network['port']);
         $this->peer = '';
 
-    }
-
-    function broadcast( $data ) {
-        if ( !isset($data['from']) )
-            $data['from'] = $this->peer;
-
-        return $this->udp->broadcast( $data );
-    }
-
-    function intercom( ) {
-        // Send the message
-        $ic = json_encode( func_get_args() );
-
-        // Send the alarm signal to parent
-        posix_kill( $this->parent_pid, SIGALRM );
-
-        $ic = wordwrap($ic,8192,"\n",true);
-        $parts = explode("\n",$ic);
-
-        foreach( $parts as $ic ) {
-            if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
-                $code = socket_last_error();
-                if ( $code == 32 )
-                    die("Intercom socket broken, DIE");
-
-                return trigger_error("Failed to send intercom using IC socket: $code");
-            }
-        }
-
-        socket_write( $this->intercom_socket,"\n",1 );
-
-    }
-
-    function recive_intercom() {
-        // Add the signal handler again
-        if ( !pcntl_signal( SIGALRM,array($this,'recive_intercom') ) )
-            trigger_error("Failed to install signal handler");
-
-        // Read the message, and try at least 1000 times
-        $buff = '';
-        $cnt = 0;
-        while( (@socket_recv($this->intercom_socket,$bytes, 1, MSG_DONTWAIT) ) || $cnt < 1000 ){
-            $cnt++;
-            $buff .= $bytes;
-        }
-
-        $buff = explode("\n",$buff);
-
-        foreach ( $buff as $buffen ){
-            if ( !trim($buffen) )
-                continue;
-
-            if ( ($args = json_decode($buffen)) === NULL )
-                return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
-
-            // Call the intercom_event
-            if ( is_callable(array($this,'intercom_event')) ) {
-                call_user_func_array( array($this,'intercom_event'),$args );
-            } else
-                trigger_error("Got intercom event but no intercom_event function exists!");
-        }
-    }
-
-    function kill() {
-        $this->kill_child();
-    }
-
-    function parent_loop() {
-        while(1) {
-            // Wait for a udp package
-            if ( !$pkt = $this->udp->listen() )
-                continue;
-
-            // Ignore invalid packages
-            if ( !isset($pkt['from']) || (!isset($pkt['cmd'])&&!isset($pkt['type'])) )
-                continue;
-
-            //if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
-            //    note(debug,$pkt);
-
-            // Answer to hello
-            if ( isset($pkt['type']) && $pkt['type'] == 'hello' ) {
-                $this->greetings();
-                continue;
-            }
-
-            // Event function is the default
-            $call = 'event';
-
-            if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
-                // All standard packet types, ex log,event and so on
-                if( isset($pkt['type']) && is_callable(array($this,$pkt['type'])) )
-                    $call = strtolower($pkt['type']);
-
-                // CMD packages, send directly to function the corresponding function, if it exists
-                if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings','bye')) )
-                    $call = strtolower($pkt['cmd']);
-            }
-
-            // Call the function
-            if ( is_callable(array($this,$call)) )
-                $res = $this->$call( $pkt );
-            else
-                $res = null;
-
-            // If the packet is to this component, answer with result, NULL = fail = nak
-            if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
-                if ( $res )
-                    $this->ack($pkt,$res);
-                elseif ( $res !== null )
-                    $this->nak($pkt);
-            }
-        }
-    }
-    //can be called to acknowledge a packet to the sender.
-    function ack($pkt,$ret=NULL){
-        $this->broadcast(array(
-            'to' => $pkt['from'],
-            'cmd' => 'ack',
-            'ret' => $ret,
-            'pkt' => $pkt
-        ));
-    }
-
-    function nak($pkt,$ret=null){
-        $this->broadcast(array(
-            'to' => $pkt['from'],
-            'cmd' => 'nak',
-            'pkt' => $pkt,
-            'ret' => $ret
-        ));
-    }
-
-    function getState( $pkt ) {
-        return $this->state;
-    }
-
-    function readState( $path ) {
-        $path = explode('.',$path);
-        $path = array_filter($path, 'strlen'); // Remove empty
-
-        $a = '$this->state';
-        foreach($path as $key => $line) {
-			if ( eval("return is_object($a);") ) {
-	            $a .= '->'.$line;
-			} else {
-	            $a .= '["'.$line.'"]';
-			}
-        }
-
-		print_r($a);
-
-        return eval("
-            if ( isset($a) ) {
-                return $a;
-            }"
-            //} else {
-            //    note(notice,'State $a is missing');
-            //};"
-        );
-    }
-
-    function setState() {
-        switch( func_num_args() ) {
-            case 1:
-                $list = func_get_args();
-                if ( is_array($list[0]) || is_object($list[0]) ) {
-                    foreach($list[0] as $key => $line)
-                        $this->setStatePath($key,$line);
-                }
-                break;
-            case 2:
-                list($key,$value) = func_get_args();
-                $this->setStatePath($key,$value);
-                break;
-        }
-        $this->sendState();
-    }
-
-    function getVariables() {
-        $data = get_object_vars($this);
-        unset($data['udp']);
-        unset($data['intercom_socket']);
-        return $data;
-    }
-
-    function sendState() {
-        $this->state['node']['memory'] = memory_get_usage();
-
-        $this->broadcast( array(
-            'type' => 'state',
-            'data' => $this->state
-        ));
-    }
-
-    function setStatePath( $path, $value ) {
-        $path = explode('.',$path);
-        $path = array_filter($path, 'strlen'); // Remove empty
-
-        $a = '$this->state';
-        foreach($path as $key => $line) {
-            $a .= '["'.$line.'"]';
-            eval("
-                if ( !isset($a) || !is_array($a) ) {
-                    $a = array();
-                }
-            ");
-        }
-
-        $string = "$a = \$value;";
-
-        eval($string);
-    }
-
-    function bye(){
-        $this->broadcast(array(
-            'cmd' => 'bye'
-        ));
-    }
-
-    function greetings(){
-        if ( !isset($this->componentclasses) ) {
-            note(warning,'No component classes defined!');
-            $this->componentclasses = array();
-        }
-        if ( !isset($this->settings) ) {
-            note(warning,'No component settings defined!');
-            $this->settings = array();
-        }
-
-        $this->broadcast(array(
-            'from' => $this->peer,
-            'cmd' => 'greetings',
-            'class' => $this->componentclasses,
-            'settings' => $this->settings
-        ));
-        $this->sendState();
-    }
-
-    function broadcast_event( $event,$data=array() ){
-        $this->broadcast(array(
-            'type' => 'event',
-            'event' => $event,
-            'data' => $data
-        ));
-    }
-
-    function child_loop($function) {
-        while(1) {
-            call_user_func(array($this,$function));
-        }
-    }
-
-    function kill_parent() {
-        $this->bye();
-        note(warning, "Died in child, killing parent");
-        posix_kill( $this->parent_pid, SIGINT );
-        die();
-    }
-
-    function kill_child()  {
-        if ( $this->udp->istcp )
-            return;
-
-        // Send bye
-        $this->bye();
-
-        // Kill the child
-        note(warning, "Died in parent, killing child");
-        posix_kill( $this->child_pid, 9 );
-        die();
-    }
-
-
-    function start( $id=NULL, $child=null ) {
+    }/*}}}*/
+    function start( $id=NULL, $child=null ) {/*{{{*/
         if($id)
             $this->peer = $id;
 
         // Create a name if the node dosnt have one
         if ( !$this->peer ) {
             $this->peer = md5(time());
-            $hashed = true;
+            $this->hashed = true;
         }
         $this->udp->peer = $this->peer;
 
         note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
-            
-        // Say hello to the network
-        $this->greetings();
 
-        // Try to read settings
-        $this->read_settings();
+        if ( !$this->hashed ) {
+            // Say hello to the network
+            $this->greetings();
 
-        $this->setState(
-            array(
-                'node.started' => date('Y-m-d H:i:s'),
-                'node.pid' => posix_getpid()
-            )
-        );
+            // Try to read settings
+            $this->read_settings();
+
+            $this->setState(
+                array(
+                    'node.started' => date('Y-m-d H:i:s'),
+                    'node.pid' => posix_getpid()
+                )
+            );
+        }
 
         if ( is_callable(array($this,'startup')) )
             $this->startup();
@@ -386,9 +117,281 @@ class component {
             note( debug, "Starting child loop" );
             $this->child_loop($child);
         }
-    }
+    }/*}}}*/
 
-    function save_setting($pkt) {
+// MAIN LOOPS
+    function parent_loop() {/*{{{*/
+        while(1) {
+            // Wait for a udp package
+            if ( !$pkt = $this->udp->listen() )
+                continue;
+
+            // Ignore invalid packages
+            if ( !isset($pkt['from']) || (!isset($pkt['cmd'])&&!isset($pkt['type'])) )
+                continue;
+
+            //if ( !isset($pkt['type']) || $pkt['type'] != 'log' )
+            //    note(debug,$pkt);
+
+            // Answer to hello
+            if ( isset($pkt['type']) && $pkt['type'] == 'hello' ) {
+                $this->greetings();
+                continue;
+            }
+
+            // Event function is the default
+            $call = 'event';
+
+            if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
+                // All standard packet types, ex log,event and so on
+                if( isset($pkt['type']) && is_callable(array($this,$pkt['type'])) )
+                    $call = strtolower($pkt['type']);
+
+                // CMD packages, send directly to function the corresponding function, if it exists
+                if( isset($pkt['cmd']) && is_callable(array($this,$pkt['cmd'])) && !in_array($pkt['cmd'],array('ack','nak','greetings','bye')) )
+                    $call = strtolower($pkt['cmd']);
+            }
+
+            // Call the function
+            if ( is_callable(array($this,$call)) )
+                $res = $this->$call( $pkt );
+            else
+                $res = null;
+
+            // If the packet is to this component, answer with result, NULL = fail = nak
+            if ( isset($pkt['to']) && $pkt['to'] == $this->peer ) {
+                if ( $res )
+                    $this->ack($pkt,$res);
+                elseif ( $res !== null )
+                    $this->nak($pkt);
+            }
+        }
+    }/*}}}*/
+    function child_loop($function) {/*{{{*/
+        while(1) {
+            call_user_func(array($this,$function));
+        }
+    }/*}}}*/
+
+// COMMANDS
+    function getVariables() {/*{{{*/
+        $data = get_object_vars($this);
+        unset($data['udp']);
+        unset($data['intercom_socket']);
+        return $data;
+    }/*}}}*/
+    function kill($pkt) {/*{{{*/
+        if ($pkt) 
+            $this->ack($pkt);
+        $this->kill_child();
+    }/*}}}*/
+
+    function kill_parent() {/*{{{*/
+        $this->bye();
+        note(warning, "Died in child, killing parent");
+        posix_kill( $this->parent_pid, SIGINT );
+        die();
+    }/*}}}*/
+    function kill_child()  {/*{{{*/
+        if ( $this->udp->istcp )
+            return;
+
+        // Send bye
+        $this->bye();
+
+        // Kill the child
+        note(warning, "Died in parent, killing child");
+        posix_kill( $this->child_pid, 9 );
+        die();
+    }/*}}}*/
+
+// RESPONSES
+    function broadcast( $data ) {/*{{{*/
+        if ( !isset($data['from']) )
+            $data['from'] = $this->peer;
+
+        return $this->udp->broadcast( $data );
+    }/*}}}*/
+    function broadcast_event( $event,$data=array() ){/*{{{*/
+        $this->broadcast(array(
+            'type' => 'event',
+            'event' => $event,
+            'data' => $data
+        ));
+    }/*}}}*/
+    function greetings(){/*{{{*/
+        if ( !isset($this->componentclasses) ) {
+            note(warning,'No component classes defined!');
+            $this->componentclasses = array();
+        }
+
+        if ( !isset($this->settings) ) {
+            note(warning,'No component settings defined!');
+            $this->settings = array();
+        }
+
+        $this->broadcast(array(
+            'from' => $this->peer,
+            'cmd' => 'greetings',
+            'class' => $this->componentclasses,
+            'settings' => $this->settings
+        ));
+
+        $this->sendState();
+    }/*}}}*/
+    function bye(){/*{{{*/
+        if ( !$this->hashed ) 
+            $this->broadcast(array(
+                'cmd' => 'bye'
+            ));
+    }/*}}}*/
+    function ack($pkt,$ret=NULL){/*{{{*/
+        $this->broadcast(array(
+            'to' => $pkt['from'],
+            'cmd' => 'ack',
+            'ret' => $ret,
+            'pkt' => $pkt
+        ));
+    }/*}}}*/
+    function nak($pkt,$ret=null){/*{{{*/
+        $this->broadcast(array(
+            'to' => $pkt['from'],
+            'cmd' => 'nak',
+            'pkt' => $pkt,
+            'ret' => $ret
+        ));
+    }/*}}}*/
+
+// INTERCOM
+    function intercom( ) {/*{{{*/
+        // Send the message
+        $ic = json_encode( func_get_args() );
+
+        // Send the alarm signal to parent
+        posix_kill( $this->parent_pid, SIGALRM );
+
+        $ic = wordwrap($ic,8192,"\n",true);
+        $parts = explode("\n",$ic);
+
+        foreach( $parts as $ic ) {
+            if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
+                $code = socket_last_error();
+                if ( $code == 32 )
+                    die("Intercom socket broken, DIE");
+
+                return trigger_error("Failed to send intercom using IC socket: $code");
+            }
+        }
+
+        socket_write( $this->intercom_socket,"\n",1 );
+    }/*}}}*/
+    function recive_intercom() {/*{{{*/
+        // Add the signal handler again
+        if ( !pcntl_signal( SIGALRM,array($this,'recive_intercom') ) )
+            trigger_error("Failed to install signal handler");
+
+        // Read the message, and try at least 1000 times
+        $buff = '';
+        $cnt = 0;
+        while( (@socket_recv($this->intercom_socket,$bytes, 1, MSG_DONTWAIT) ) || $cnt < 1000 ){
+            $cnt++;
+            $buff .= $bytes;
+        }
+
+        $buff = explode("\n",$buff);
+
+        foreach ( $buff as $buffen ){
+            if ( !trim($buffen) )
+                continue;
+
+            if ( ($args = json_decode($buffen)) === NULL )
+                return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
+
+            // Call the intercom_event
+            if ( is_callable(array($this,'intercom_event')) ) {
+                call_user_func_array( array($this,'intercom_event'),$args );
+            } else
+                trigger_error("Got intercom event but no intercom_event function exists!");
+        }
+    }/*}}}*/
+
+// STATES
+    function getState( $pkt ) {/*{{{*/
+        return $this->state;
+    }/*}}}*/
+    function readState( $path ) {/*{{{*/
+        $path = explode('.',$path);
+        $path = array_filter($path, 'strlen'); // Remove empty
+
+        $a = '$this->state';
+        foreach($path as $key => $line) {
+            if ( eval("return is_object($a);") ) {
+                $a .= '->'.$line;
+            } else {
+                $a .= '["'.$line.'"]';
+            }
+        }
+
+        return eval("
+            if ( isset($a) ) {
+                return $a;
+            }"
+            //} else {
+            //    note(notice,'State $a is missing');
+            //};"
+        );
+    }/*}}}*/
+    function setState() {/*{{{*/
+        if ( $this->hashed )
+            return;
+
+        switch( func_num_args() ) {
+            case 1:
+                $list = func_get_args();
+                if ( is_array($list[0]) || is_object($list[0]) ) {
+                    foreach($list[0] as $key => $line)
+                        $this->setStatePath($key,$line);
+                }
+                break;
+            case 2:
+                list($key,$value) = func_get_args();
+                $this->setStatePath($key,$value);
+                break;
+        }
+        $this->sendState();
+    }/*}}}*/
+    function sendState() {/*{{{*/
+        if ( $this->hashed )
+            return;
+
+        $this->state['node']['memory'] = memory_get_usage();
+
+        $this->broadcast( array(
+            'type' => 'state',
+            'data' => $this->state
+        ));
+    }/*}}}*/
+    function setStatePath( $path, $value ) {/*{{{*/
+        $path = explode('.',$path);
+        $path = array_filter($path, 'strlen'); // Remove empty
+
+        $a = '$this->state';
+        foreach($path as $key => $line) {
+            $a .= '["'.$line.'"]';
+            eval("
+                if ( !isset($a) || !is_array($a) ) {
+                    $a = array();
+                }
+            ");
+        }
+
+        $string = "$a = \$value;";
+
+        eval($string);
+    }/*}}}*/
+
+// SETTINGS
+    function save_setting($pkt) {/*{{{*/
         // Fail if the setting key is not defined
         if ( !isset($this->settings[$pkt['key']]) )
             return $this->nak($pkt,array('msg' => 'Unknown setting "'.$pkt['key'].'"','value'=>''));
@@ -415,9 +418,8 @@ class component {
 
         note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
         $this->ack($pkt,array('value'=>$pkt['value']));
-    }
-
-    function read_settings() {
+    }/*}}}*/
+    function read_settings() {/*{{{*/
         // Check if there are any settings defined
         if ( !isset($this->settings) )
             return;
@@ -437,14 +439,14 @@ class component {
         }
 
         return true;
-    }
-
-    function setting($key) {
+    }/*}}}*/
+    function setting($key) {/*{{{*/
         if ( !isset($this->settings[$key]['value']) )
             return;
 
         return $this->settings[$key]['value'];
-    }
+    }/*}}}*/
+
 }
 
 ?>

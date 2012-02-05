@@ -40,68 +40,78 @@ room = {
         this.renderStates();
     },
     renderStates:function() {
-        buttons = $$('.room .button');
-        for( button in buttons ) {
-            if ( buttons[button].data == undefined || buttons[button].data.state == undefined) {
-                continue;
-            }
-
-			mode = '';
-			if ( buttons[button].data.state.indexOf('=') != -1 ) {
-				mode = '=';
-            	root = buttons[button].data.state.split('=');
-				path = root[0].split('.');
-			} else if ( buttons[button].data.state.indexOf('>') != -1 ) {
-				mode = '>';
-            	root = buttons[button].data.state.split('>');
-				path = root[0].split('.');
-			} else if ( buttons[button].data.state.indexOf('<') != -1 ) {
-				mode = '<';
-            	root = buttons[button].data.state.split('<');
-				path = root[0].split('.');
-			} else {
-				root = buttons[button].data.state;
-				path = root.split('.');
-			}
-
-			node = path[0];
-            delete path[0];
-            p = '';
-            for( key in path ) {
-                if ( typeof path[key] == 'function' ) {
+        try{
+            buttons = $$('.room .button');
+            for( button in buttons ) {
+                if ( buttons[button].data == undefined || buttons[button].data.state == undefined) {
                     continue;
                 }
 
-                n = path[key];
-
-                if ( n-0 == n && n.length>0 ) {
-                    p += '['+n+']';
+                mode = '';
+                if ( buttons[button].data.state.indexOf('=') != -1 ) {
+                    mode = '=';
+                    root = buttons[button].data.state.split('=');
+                    path = root[0].split('.');
+                } else if ( buttons[button].data.state.indexOf('>') != -1 ) {
+                    mode = '>';
+                    root = buttons[button].data.state.split('>');
+                    path = root[0].split('.');
+                } else if ( buttons[button].data.state.indexOf('<') != -1 ) {
+                    mode = '<';
+                    root = buttons[button].data.state.split('<');
+                    path = root[0].split('.');
                 } else {
-                    p += '.'+n;
+                    root = buttons[button].data.state;
+                    path = root.split('.');
                 }
 
-                eval("if ( this.states[node]"+p+" == undefined ) {this.states[node]"+p+" = {};}");
-            }
+                node = path[0];
+
+                if ( this.states[node] == undefined ) {
+                    buttons[button].getElement('.state').innerHTML = 'UNKNOWN';
+                    continue;
+                }
+
+                delete path[0];
+                p = '';
+                for( key in path ) {
+                    if ( typeof path[key] == 'function' ) {
+                        continue;
+                    }
+
+                    n = path[key];
+
+                    if ( n-0 == n && n.length>0 ) {
+                        p += '['+n+']';
+                    } else {
+                        p += '.'+n;
+                    }
+
+                    eval("if ( this.states[node]"+p+" == undefined ) {this.states[node]"+p+" = {};}");
+                }
 
 
-            if ( mode != '' ) {
-				switch (mode) {
-					case '=':
-		                eval("if (this.states[node]"+p+"==root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
-    		            buttons[button].getElement('.state').innerHTML = '';
-						break;
-					case '>':
-		                eval("if (this.states[node]"+p+">root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
-    		            buttons[button].getElement('.state').innerHTML = '';
-						break;
-					case '<':
-		                eval("if (this.states[node]"+p+"<root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
-    		            buttons[button].getElement('.state').innerHTML = '';
-						break;
-				}
-            } else {
-                eval("buttons[button].getElement('.state').innerHTML = this.states[node]"+p+";");
+                if ( mode != '' ) {
+                    switch (mode) {
+                        case '=':
+                            eval("if (this.states[node]"+p+"==root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+                            buttons[button].getElement('.state').innerHTML = '';
+                            break;
+                        case '>':
+                            eval("if (this.states[node]"+p+">root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+                            buttons[button].getElement('.state').innerHTML = '';
+                            break;
+                        case '<':
+                            eval("if (this.states[node]"+p+"<root[1]) {buttons[button].addClass('active');} else {buttons[button].removeClass('active');};");
+                            buttons[button].getElement('.state').innerHTML = '';
+                            break;
+                    }
+                } else {
+                    eval("buttons[button].getElement('.state').innerHTML = this.states[node]"+p+";");
+                }
             }
+        } catch (er) {
+            //alert(er.message);
         }
     },
     render:function(uuid) {
@@ -141,9 +151,9 @@ room = {
                 el.uuid = button;
                 el.data.position = el.data.position.split(',');
                 el.getElement('.head').innerHTML = el.data.title;
-				if ( el.data.state != undefined ) {
-	                el.getElement('.state').innerHTML = 'UNKNOWN';
-				}
+                if ( el.data.state != undefined ) {
+                    el.getElement('.state').innerHTML = 'UNKNOWN';
+                }
                 el.onclick = function() {room.button(this)};
             }
         }

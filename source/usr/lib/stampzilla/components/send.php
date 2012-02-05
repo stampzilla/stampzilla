@@ -1,6 +1,8 @@
+#!/usr/bin/php
 <?php
 
 $start = microtime(true);
+
 require_once '../lib/component.php';
 require_once "../lib/functions.php";
 
@@ -57,7 +59,7 @@ class sender extends component{
         }
     }
 
-    function send() {
+    function startup() {
 		if ( !$_GET ) {
         	note(error,'No send argument defined!');
 			die();
@@ -108,8 +110,6 @@ class sender extends component{
 }
 
 $c = new sender();
-$c->peer = md5(mt_rand(0, 32) . time());
-$c->send();
 
 $c->start('','checkTimeout');
 ?>

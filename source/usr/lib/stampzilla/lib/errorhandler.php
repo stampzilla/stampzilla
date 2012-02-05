@@ -95,9 +95,9 @@ class errorhandler {
 			$timestamp = floor($utimestamp);
 			$milliseconds = round(($utimestamp - $timestamp) * 1000000);
 
-			return str_pad($timestamp,3,' ',STR_PAD_LEFT)."s ".str_pad($milliseconds,6,' ',STR_PAD_LEFT)."us";
+			return str_pad($timestamp,3,' ',STR_PAD_LEFT)."s ".str_pad(round($milliseconds/1000,0),3,' ',STR_PAD_LEFT)."ms";
 
-	        return date('H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
+	        //return date('H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
 		}
     }
 }

@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 require "../lib/constants.php";

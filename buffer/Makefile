@@ -1,8 +1,7 @@
 all:main
 main:buffer.go
-	8g buffer.go
-	8l buffer.8
+	8g -o buffer.8 buffer.go 
+	8l -o buffer buffer.8
 	rm buffer.8
-	mv 8.out buffer
-	cp buffer ../source/usr/lib/stampzilla/components/ajaxPushBuffer
+	cp buffer ../source/usr/lib/stampzilla/components/sape
 	./buffer

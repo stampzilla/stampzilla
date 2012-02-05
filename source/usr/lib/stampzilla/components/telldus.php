@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 
 require_once "../lib/component.php";
@@ -58,7 +59,6 @@ class telldus extends component {
         if ( $this->state[$pkt['id']]['status'] > 0 ) {
             return $this->reset($pkt);
         }
-
         return $this->set($pkt);
     }
 
@@ -131,7 +131,6 @@ class telldus extends component {
             $templast = $temporg;
             $start = microtime(true);
             $this->intercom(trim($temporg));
-
         }
 
     }

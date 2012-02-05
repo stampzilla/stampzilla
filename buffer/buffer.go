@@ -3,12 +3,11 @@ package main
 import (
     "http";
     "io";
-	"log";
-	"fmt";
-	"strings"
-	"os"
-	"net"
-	"time"
+    "log";
+    "fmt";
+    "os"
+    "net"
+    "time"
 )
 
 type Message struct {
@@ -20,130 +19,137 @@ var sessions = map[string] chan string{}
 
 // HTTP listner
 func httpRunner() {
-	http.HandleFunc("/", PushServer)
-	err := http.ListenAndServe(":12345", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err.String())
-	}
+    http.HandleFunc("/", PushServer)
+    err := http.ListenAndServe(":12345", nil)
+    if err != nil {
+        log.Fatal("ListenAndServe: ", err.String())
+    }
 }
 
 // UDP listner
 func udpRunner() {
-	udpAddr, err := net.ResolveUDPAddr("up4", ":8282")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error ", err.String())
-		os.Exit(1)
-	}
+    udpAddr, err := net.ResolveUDPAddr("up4", ":8282")
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Fatal error ", err.String())
+        os.Exit(1)
+    }
 
-	conn, err := net.ListenUDP("udp", udpAddr)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error ", err.String())
-		os.Exit(1)
-	}
+    conn, err := net.ListenUDP("udp", udpAddr)
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Fatal error ", err.String())
+        os.Exit(1)
+    }
 
-	for {
-		handleJSON(conn)
-	}
+    for {
+        handleJSON(conn)
+    }
 }
 
 func main(){
-	go httpRunner();
-	udpRunner();
+    go httpRunner();
+    udpRunner();
 }
 
 func handleJSON(conn *net.UDPConn) {
 
-	var buf [10485]byte
+    var buf [1024000]byte
+    var stop int
 
-	// Read in the message to the buffer 
-	_, _, err := conn.ReadFromUDP(buf[0:])
-	if err != nil {
-		return
-	}
+    // Read in the message to the buffer 
+    stop, _, err := conn.ReadFromUDP(buf[:])
+    if err != nil {
+        return
+    }
 
-	// Send the message to all active clients
-	for i,xi := range sessions {
+    data := string(buf[:stop]);
+
+    // Send the message to all active clients
+    for i,xi := range sessions {
         _,test := sessions[i];
-		if test {
-			//fmt.Print("Write chan ",i,"... ");
+        if test {
+            //fmt.Print("Write chan ",i,"... ");
 
-			// Special to fix no-blocking, could hapend if one channel buffer is full
-			select{
-				case xi <- strings.TrimRight(string(buf[:]),string(0) ):
-				default:
-			}
+            // Special to fix no-blocking, could hapend if one channel buffer is full
+            select{
+                case xi <- data:
+                default:
+            }
 
-			//fmt.Print("done\n");
-		}
-	}
-	
-	//fmt.Print("JSON from ",addr.IP,": \n");
+            //fmt.Print("done\n");
+        }
+    }
+    
+    //fmt.Print("JSON from ",addr.IP,": \n");
 }
 
 func PushServer(w http.ResponseWriter, req *http.Request) {
 
-	var channel chan string
-	var id string;
+    var channel chan string
+    var id string;
 
 
-	// Read the cookie,if there are any
-	cookie,err := req.Cookie("stampzilla")
-	if err != nil {
-		fmt.Print("No cookie\n");
-	} else {
-		id = cookie.Value
-		
-		//fmt.Print("Cookie: ",cookie.Value);
-	}
+    // Read the cookie,if there are any
+    cookie,err := req.Cookie("stampzilla")
+    if err != nil {
+        fmt.Print("No cookie\n");
+    } else {
+        id = cookie.Value
+        
+        //fmt.Print("Cookie: ",cookie.Value);
+    }
 
-	// Test if the channel is available
+    // Test if the channel is available
     _,test := sessions[id];
 
-	// If channel was not found
-	if ( id == "" || !test) {
-		// Create a new bufferd channel
-		channel = make(chan string,50)
+    // If channel was not found
+    if ( id == "" || !test) {
+        // Create a new bufferd channel
+        channel = make(chan string,50)
 
-		// Create a new session ID
-		t := time.LocalTime()
-		id = t.Format("20060102150405")
+        // Create a new session ID
+        t := time.LocalTime()
+        id = t.Format("20060102150405")
 
-		// Save the channel
-		sessions[id] = channel
+        // Save the channel
+        sessions[id] = channel
 
-	} else {
-		// Select the old channel
-		channel = sessions[id]
-	}
+    } else {
+        // Select the old channel
+        channel = sessions[id]
+    }
 
-	// Set the content type
-	w.Header().Add("Content-Type","text/html");
+    // Set the content type
+    w.Header().Add("Content-Type","text/html");
 
-	// And add the cookie
-	w.Header().Add("Set-Cookie","stampzilla="+id);
+    // And add the cookie
+    w.Header().Add("Set-Cookie","stampzilla="+id);
+    w.Header().Add("Expires","Sat, 26 Jul 1997 05:00:00 GMT");
+    w.Header().Add("Cache-Control","no-cache, must-revalidate");
+    w.Header().Add("Pragma","no-cache");
 
-	//fmt.Print("New connection ",id,", wait for data...\n");
+    //fmt.Print("New connection ",id,", wait for data...\n");
 
-	// Start wait for data
-	writeToHttpFromChan(w,channel);
+    // Start wait for data
+    writeToHttpFromChan(w,channel);
 }
 
 func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {
 
-	// Create a timeout timer, to kill old sessions
-	timeout := make (chan bool)
-	go checkTimeout(timeout)
+    // Create a timeout timer, to kill old sessions
+    timeout := make (chan bool)
+    go checkTimeout(timeout)
 
-	// Wait for a message or timeout
-	select {
-		case msg := <-channel:
-			io.WriteString(w, "window.sape.recive("+msg+");")
-		case <-timeout:
-			return
-	}
+    // Wait for a message or timeout
+    select {
+        case msg := <-channel:
+            io.WriteString(w, "window.sape.recive("+msg+");")
+            //fmt.Print("window.sape.recive("+msg+");\n")
+        case <-timeout:
+            return
+    }
 }
 
 func checkTimeout (timeout chan bool) {
-	time.Sleep(5e9) // 60 sec, (usec)
-	timeout <- true // Send timeout
+    time.Sleep(5e9) // 60 sec, (usec)
+    timeout <- true // Send timeout
 }

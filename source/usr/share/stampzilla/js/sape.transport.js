@@ -1,33 +1,69 @@
 window.sape = {
-	url:null,
-	init: function(url) {
-		this.requests = [];
-		this.requestFailObserver = [];
-		this.url = url;
-		//parent.window.sape.hello('!!!asd');
-		this.request('?test');
-	},
-	request: function( query ) {
-		var request = document.createElement('script');
-		request.src = this.url + query;
-		document.head.appendChild(request);
-		this.requests.push(request);
+    url:null,
+    init: function(url) {
+        this.requests = [];
+        this.requestFailObserver = [];
+        this.url = url;
 
-		//Detect timeout
-		//this.requestFailObserver.push(this.ape.requestFail.delay(this.ape.options.pollTime + 10000, this.ape, [-1, request]));
+        this.count = 0;
+        //parent.window.sape.hello('!!!asd');
+        this.request('?start');
 
-		/*if (Browser.Engine.gecko) {
-				//Firefox hack to avoid status bar always show a loading message
-				//Ok this hack is little bit weird but it works!
-				(function() {
-						var tmp = document.createElement('iframe');
-						document.body.appendChild(tmp);
-						document.body.removeChild(tmp);
-				}).delay(200);
-		}*/
-	},
-	recive:function(data) {
-		parent.window.sape.recive(data);
-		this.request('?test');
-	}
+
+        document.body.addEventListener('unload',function(){alert('abort')})
+    },
+    request: function( query ) {
+        var request = document.createElement('script');
+        request.src = this.url + query + "&" + (++this.count);
+        document.head.appendChild(request);
+        this.requests.push(request);
+
+        //Detect timeout
+        clearTimeout(this.requestFailObserver);
+        this.requestFailObserver = setTimeout(this.requestFail,5000 + 200);
+
+       /* if (true) {
+                //Firefox hack to avoid status bar always show a loading message
+                //Ok this hack is little bit weird but it works!
+                setTimeout(function() {
+                        var tmp = document.createElement('iframe');
+                        document.body.appendChild(tmp);
+                        document.body.removeChild(tmp);
+                },200);
+        }*/
+    },
+    recive:function(data) {
+
+        clearTimeout(this.requestFailObserver);
+        this.clearRequest(this.requests.shift());
+
+        this.failCounter = 0;
+
+        this.request('?');
+        parent.window.sape.recive(data);
+    },
+    clearRequest:function(request) {
+
+        clearTimeout(this.requestFailObserver);
+        request.parentNode.removeChild(request);
+
+        //Avoid memory leaks
+        if (request.clearAttributes) {
+            request.clearAttributes();
+        } else {
+            for (var prop in request) delete request[prop];
+        }
+    },
+    requestFail: function() {
+
+        window.sape.clearRequest(window.sape.requests.shift());
+
+        if (this.failCounter < 6) this.failCounter++;
+
+        //this.cancelRequest();
+
+        var delay = (this.failCounter*Math.random(300,1000));
+
+        setTimeout(function() {window.sape.request('?check');},delay );
+    },
 };
