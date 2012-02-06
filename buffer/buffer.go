@@ -16,6 +16,8 @@ type Message struct {
     from string
 }
 
+var buf [1024000]byte
+
 // List of all active sessions
 var sessions = map[string] chan string{}
 
@@ -54,9 +56,6 @@ func main(){
 
 func handleJSON(conn *net.UDPConn) {
 
-    var buf [1024000]byte
-    var stop int
-
     // Read in the message to the buffer 
     stop, _, err := conn.ReadFromUDP(buf[:])
     if err != nil {
@@ -92,7 +91,7 @@ func PushServer(w http.ResponseWriter, req *http.Request) {
     // Read the cookie,if there are any
     cookie,err := req.Cookie("stampzilla")
     if err != nil {
-        fmt.Print("No cookie\n");
+        //fmt.Print("No cookie\n");
     } else {
         id = cookie.Value
         
@@ -157,5 +156,7 @@ func checkTimeout (timeout chan bool) {
     // Non blocking command, if the channel is dead
     select {
         case timeout <- true:
+		default:
+			return
     }
 }
