@@ -26,7 +26,6 @@ class yamaha extends component {
         'Zone2Power' => 0,
         'Zone2Source' => '',
     );
-    private $proj = false;
 
     function send( $cmd ) {
         $this->s->sendMessage("\x03\x03\x02$cmd\x03");

@@ -101,7 +101,7 @@ class logic extends component {
 
                 $state = true;
 
-                switch($line['type']) {
+                switch(strtolower($line['type'])) {
                     case 'eq':
                         if ( $val != $line['value'] ) {
                             $state = false;
@@ -112,6 +112,9 @@ class logic extends component {
                             $state = false;
                         }
                         break;
+					default:	
+						$state = false;
+						break;
                 }
 
                 if ( !$state )
@@ -473,6 +476,10 @@ class logic extends component {
             case 'state':
                 $this->setState('runner',$data);
                 break;
+            case 'new_schedule':
+				$this->schedule = $data;
+                $this->setState('schedule',$data);
+                break;
         }
     }/*}}}*/
     function _child(){/*{{{*/
@@ -491,7 +498,11 @@ class logic extends component {
                     while($this->schedule[$this->event]['timestamp'] < time()+1 ) {
                         $this->schedule[$this->event]['timestamp'] += $this->schedule[$this->event]['interval'];
                     }
-                }
+                } else {
+					// No repetition, then remove the event
+                    note(debug,'Removed event #'.$this->event);
+                    unset($this->schedule[$this->event]);
+				}
                 $this->event = null;
             }
         }
@@ -536,6 +547,7 @@ class logic extends component {
             }
 
             $this->_save('schedule');
+            $this->intercom('new_schedule',$this->schedule);
             unlink('/var/spool/stampzilla/reload_schedule');
 
             if ( $this->event > -1 ) {

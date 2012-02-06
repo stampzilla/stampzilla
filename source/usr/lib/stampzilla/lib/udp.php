@@ -29,7 +29,7 @@ class udp {
     function broadcast( $array ) {
         $string = json_encode($array)."\n";
         if(strlen($string) > 8192){
-            if($array['cmd'] == 'ack'){
+            if(isset($array['cmd']) && $array['cmd'] == 'ack'){
                 if ( !$pid = pcntl_fork() ){
                     $this->istcp = true;
 

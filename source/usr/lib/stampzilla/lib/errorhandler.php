@@ -60,10 +60,14 @@ class errorhandler {
             die("Failed to create error send socket");
 
         socket_set_option( $s, SOL_SOCKET, SO_BROADCAST, 1 );
+		global $stampzilla;
+		if ( !$stampzilla )
+			$stampzilla = '???';
+
 		$string = json_encode(
 			array(
 				'type' => 'log',
-				'from' => '???',
+				'from' => $stampzilla,
 				'level' => $level,
 				'message' => $msg,
                 'data' => $data

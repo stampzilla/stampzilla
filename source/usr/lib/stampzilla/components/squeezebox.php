@@ -57,7 +57,8 @@ class squeezebox extends component {
             }
 
             $this->send("players 0 999 \n");
-            $this->send("listen 1\n");
+            //$this->send("listen 1\n");
+            $this->send("subscribe alarm,pause,play,stop,client\n");
         }
     }
 
@@ -77,6 +78,9 @@ class squeezebox extends component {
     function play($pkt){
         return $this->send($this->nameToMac($pkt['id']).' play');
     }
+    function playRandom($pkt){
+        return $this->send($this->nameToMac($pkt['id']).' randomplay tracks');
+    }
     function stop($pkt){
         return $this->send($this->nameToMac($pkt['id']).' stop');
     }
@@ -87,6 +91,11 @@ class squeezebox extends component {
         if(!isset($pkt['power']))
             $pkt['power'] = (!$this->state[$pkt['id']]['power'])+0;
         return $this->send($this->nameToMac($pkt['id']).' power '.$pkt['power']);
+    }
+    function volume($pkt){
+        if(!isset($pkt['volume']))
+			return false;
+        return $this->send($this->nameToMac($pkt['id']).' mixer volume '.$pkt['volume']);
     }
 
     function intercom_event($cmd) {
@@ -101,6 +110,28 @@ class squeezebox extends component {
         note(debug,'Read: '.$cmd);
         
         switch($main) {
+			case 'play':
+				$this->setState('playing',true);
+				break;
+			case 'pause':
+			case 'stop':
+				$this->setState('playing',false);
+				break;
+            case 'client':
+                switch($data[0]) {
+                    case 'disconnect':
+                    case 'reconnect':
+                    case 'new':
+        	    		$this->send("players 0 999 \n");
+						break;
+                }
+            case 'alarm':
+                switch($data[0]) {
+                    case 'sound':
+                    case 'end':
+                    case 'snooze':
+                    case 'snooze_end':
+                }
             case 'listen':
                 $this->setState('server.connected',true);
                 break;
@@ -115,9 +146,10 @@ class squeezebox extends component {
                         $players[$current][$line[0]] = $line[1];
 
                         // request power
-                        $this->send(urlencode($current)." power ?\n");
+                        //$this->send(urlencode($current)." power ?\n");
                         // request volume
-                        $this->send(urlencode($current)." mixer volume ?\n");
+                        //$this->send(urlencode($current)." mixer volume ?\n");
+                        $this->send(urlencode($current)." status 0 999 subscribe:60\n");
                     } elseif ($current) {
                         $players[$current][$line[0]] = $line[1];
                     }
@@ -127,6 +159,9 @@ class squeezebox extends component {
                     unset($players[$key]);
                 }
                 $this->setState($players);
+				break;
+			case 'subscribe':
+				break;
             default:
                 $main = $this->macToName($main);
                 if ( isset($this->state[$main]) ) {
@@ -134,6 +169,12 @@ class squeezebox extends component {
                         case 'power':
                             $this->setState($main.'.power',$data[1]);
                             break;
+						/*case 'playlist':
+							switch($data[1]) {
+								case 'newsong':
+                                    $this->setState($main.'.title',$data[2]);
+									break;
+							}
                         case 'mixer':
                             switch($data[1]) {
                                 case 'volume':
@@ -152,9 +193,70 @@ class squeezebox extends component {
                                     }
                                     break;
                             }
-                            break;
+                            break;*/
+						case 'status':
+							$prev = $this->state[$main];
+
+							unset($data[0]);
+							foreach($data as $key => $line) {
+								$data[$key] = explode(':',$line,2);
+
+								if( $data[$key][0] == 'mode' ) {
+									switch($data[$key][1]) {
+										case 'play':
+											$data['playing'] = true;
+											break;
+										case 'pause':
+										case 'stop':
+											$data['playing'] = false;
+											break;
+									}
+								}
+
+								if ( !isset($data[$key][1]) || $data[$key][0] == '-' || $data[$key][0] == 'tags' || $data[$key][0] == '2' || $data[$key][0] == 'mode') {
+									unset($data[$key]);
+									continue;
+								}
+
+								if ( $data[$key][0] == 'playlist index' ) {
+									$index = $data[$key][1];
+								}
+
+								if ( isset($index) &&  $index != $data['playlist_cur_index']) {
+									unset($data[$key]);
+									continue;
+								} elseif (isset($index)) {
+									$data[$key][0] = 'song '.$data[$key][0];
+								}
+
+								if ( $data[$key][0] == 'time' ) {
+									$data[$key][1] = time() - floor($data[$key][1]);
+								}
+
+								if ( strstr($data[$key][0],' ') ) {
+									$line = explode(' ',$data[$key][0],2);
+									if ( !isset($data[$line[0]]) )
+										$data[$line[0]] = array();
+
+									$data[$line[0]][$line[1]] = $data[$key][1];
+								} else {
+									$data[$data[$key][0]] = $data[$key][1];
+								}
+
+
+								unset($data[$key]);
+							}
+							foreach($this->state[$main] as $key => $line) {
+								if ( !isset($data[$key]) )
+									$data[$key] = $line;
+							}
+
+							if ( $prev != $data ) {
+								$this->setState($main,$data);
+							}
+							break;
                     }
-                }
+				}
         }
     }
 
@@ -163,6 +265,8 @@ class squeezebox extends component {
             if(isset($player['playerid']) && $player['playerid'] === $mac)
                 return $player['name'];
         }
+
+		note(warning, 'Cant find player with id:'.$mac);
         return false;
     }
     function nameToMac($name){

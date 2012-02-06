@@ -10,6 +10,8 @@ import (
     "time"
 )
 
+import _ "http/pprof"
+
 type Message struct {
     from string
 }
@@ -70,9 +72,8 @@ func handleJSON(conn *net.UDPConn) {
             //fmt.Print("Write chan ",i,"... ");
 
             // Special to fix no-blocking, could hapend if one channel buffer is full
-            select{
+            select {
                 case xi <- data:
-                default:
             }
 
             //fmt.Print("done\n");
@@ -144,6 +145,7 @@ func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {
         case msg := <-channel:
             io.WriteString(w, "window.sape.recive("+msg+");")
             //fmt.Print("window.sape.recive("+msg+");\n")
+            return
         case <-timeout:
             return
     }
@@ -151,5 +153,9 @@ func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {
 
 func checkTimeout (timeout chan bool) {
     time.Sleep(5e9) // 60 sec, (usec)
-    timeout <- true // Send timeout
+
+    // Non blocking command, if the channel is dead
+    select {
+        case timeout <- true:
+    }
 }

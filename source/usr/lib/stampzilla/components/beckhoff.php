@@ -67,6 +67,8 @@ class beckhoff extends component {
                 }
             }
         }
+
+		usleep(100000);
     }
 }
 

@@ -43,6 +43,8 @@ class component {
         $this->udp->peer = $this->peer;
 
         note(debug,"----- Starting up component (".get_class($this).") with callsign ".$this->peer." -----");
+		global $stampzilla;
+		$stampzilla = $this->peer;
 
         if ( !$this->hashed ) {
             // Say hello to the network

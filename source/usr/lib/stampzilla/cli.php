@@ -95,6 +95,7 @@ function command($cmd,$pwd = '',$args=array()) {
             $p = $arg;
             unset($p[0]);
 
+
             if ( ($active = listActive()) ) {
                 require_once('../lib/udp.php');
                 $udp = new udp('0.0.0.0','255.255.255.255',8282);
@@ -291,6 +292,30 @@ function command($cmd,$pwd = '',$args=array()) {
             require_once("lib/udp.php");
             require_once("lib/errorhandler.php");
 
+			$level = 9999;
+			
+			if ( isset($arg[1]) ) {
+				switch(strtolower(trim($arg[1]))) {
+					case 'critical':
+						$level = 0;
+						break;
+					case 'error':
+						$level = 1;
+						break;
+					case 'warning':
+						$level = 2;
+						break;
+					case 'notice':
+						$level = 3;
+						break;
+					case 'debug':
+						$level = 4;
+						break;
+					default:
+						die("Unknown log level! Available: [critical,error,warning,notice,debug]");
+				}
+			}
+			
             $udp = new udp('0.0.0.0','255.255.255.255',8281);
             while(1) {
                 if ( !$pkt = $udp->listen() )
@@ -300,8 +325,11 @@ function command($cmd,$pwd = '',$args=array()) {
                 if (!isset($pkt['type']) || $pkt['type'] != 'log' ) 
                     continue;
 
+				if ( $pkt['level'] > $level )
+					continue;
+
                 // Format message
-                echo format($pkt['level'],$pkt['message']);
+                echo $pkt['from']." - ".format($pkt['level'],$pkt['message']);
             }
 /*}}}*/
         case 'changelog':/*{{{*/
