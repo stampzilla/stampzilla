@@ -145,9 +145,7 @@ class lg7000 extends component {
                         $this->send('kf 0 ff'); // Check volume
                         $this->send('xb 0 ff'); // Check source
                     } else {
-                        $this->setState('power',$power);
-                        $this->setState('source','');
-                        $this->setState('channel','');
+                        $this->setState(array('power'=>$power,'source'=>'','channel'=>''));
                     }
 
                     break;

@@ -116,7 +116,6 @@ class telldus extends component {
     }
     function _child() {
         $this->socket = stream_socket_client('unix:///tmp/TelldusEvents');
-        $this->tmpTemperatureFile = '/tmp/temperature';
         $templast = '';
         $start = microtime(true);
         while(1){
