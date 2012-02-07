@@ -62,8 +62,6 @@ func handleJSON(conn *net.UDPConn) {
         return
     }
 
-    data := string(buf[:stop]);
-
     // Send the message to all active clients
     for i,xi := range sessions {
         _,test := sessions[i];
@@ -72,7 +70,7 @@ func handleJSON(conn *net.UDPConn) {
 
             // Special to fix no-blocking, could hapend if one channel buffer is full
             select {
-                case xi <- data:
+                case xi <- string(buf[:stop]):
             }
 
             //fmt.Print("done\n");
