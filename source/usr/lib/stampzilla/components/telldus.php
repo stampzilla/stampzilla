@@ -107,11 +107,27 @@ class telldus extends component {
                 $temp[$t[0]] = $t[1];
             unset($temp[$key]);
         }
-        if(isset($temp['type']) && $temp['type'] == 'temperature'){
-            file_put_contents('/tmp/temperature', $temp['temp']);
-            $this->setState('temp',$temp['temp']);
+        if(isset($temp['type'])){
+            switch($temp['type']) {
+                case 'temperature':
+                    file_put_contents('/tmp/temperature', $temp['temp']);
+                    $this->setState('temp',$temp['temp']);
+                    break;
+                case 'selflearning':
+                    note(notice,'selflearning');
+                    if(isset($temp['house']) && isset($temp['group']) &&isset($temp['unit'])&&isset($temp['method'])  ) {
+                        if($temp['method'] == 'turnon')
+                            $m = 'on';
+                        else
+                            $m = 'off';
+                        $this->setState($temp['house'].'_'.$temp['group'].'_'.$temp['unit'].'_'.$m.'.button',true);
+                        sleep(1);
+                        $this->setState($temp['house'].'_'.$temp['group'].'_'.$temp['unit'].'_'.$m.'.button',false);
+                    }
+                    
+                    break;
+            }
         }
-
         note(notice,print_r($temp,1));
     }
     function _child() {
