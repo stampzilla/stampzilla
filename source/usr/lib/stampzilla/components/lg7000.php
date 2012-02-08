@@ -144,28 +144,33 @@ class lg7000 extends component {
                         $this->send('ke 0 ff'); // Check mute
                         $this->send('kf 0 ff'); // Check volume
                         $this->send('xb 0 ff'); // Check source
-                    } else {
+                    } elseif(isset($this->state['power']) && $power != $this->state['power']){
+                        $this->setState(array('power'=>$power,'source'=>'','channel'=>''));
+                    } elseif(!isset($this->state['power'])){
                         $this->setState(array('power'=>$power,'source'=>'','channel'=>''));
                     }
 
                     break;
                 case 'ke': // mute
-                    $this->setState('mute',!hexdec($data[1]));
+                    if($this->state['mute'] === hexdec($data[1]))
+                        $this->setState('mute',!hexdec($data[1]));
                     break;
                 case 'kf': // volume
-                    $this->setState('volume',hexdec($data[1]));
+                    if($this->state['volume'] !== hexdec($data[1]))
+                        $this->setState('volume',hexdec($data[1]));
                     break;
                 case 'xb': // source
                     $key = array_keys($this->sources, $data[1]);
                     if ( $key ) {
-                        $this->setState('source',$key[0]);
+                        if($this->state['source'] !== $key[0])
+                            $this->setState('source',$key[0]);
 
                         if ( $key[0] == 'digital' || $key[0] == 'analog' )
                             $this->send('ma 0 ff ff ff'); // Check channel
-                        elseif ( $this->state['channel'] )
+                        elseif ( $this->state['channel'] && $this->state['channel'] !=='' )
                             $this->setState('channel','');
 
-                    } elseif( $this->state['source'] ) {
+                    } elseif( $this->state['source'] && $this->state['source'] !=='' ) {
                         $this->setState('source','');
                     }
 

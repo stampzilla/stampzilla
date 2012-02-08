@@ -27,14 +27,14 @@ schedule = {
         var html = '';
         for(var cmduuid in data.commands) {
             html += '<div class="cmds">';
-            html += '<a style="float:right;" href="" onclick="schedule.unscheduleCommand(\''+cmduuid+'\');return false;">X</a>';
+            html += '<input type="button" value="Remove" onclick="if(!confirm(\'Are u sure?\')){return false;}schedule.unscheduleCommand(\''+cmduuid+'\');return false;" />';
             for(var fields in data.commands[cmduuid]) {
                 html += '<div class="cmd">'+fields+' : '+data.commands[cmduuid][fields]+'</div>';
             }
             html += '</div>';
         }
-        html += '<a style="float:right;" href="" onclick="schedule.showFormCmd(\''+data.uuid+'\');return false;">Add command</a>';
-        html += '<div class="name">'+data.name+'<a href="" onclick="schedule.unschedule(\''+data.uuid+'\');return false;">X</a></div>';
+        html += '<div style="float:right;"><input type="button" value="Add command" onclick="schedule.showFormCmd(\''+data.uuid+'\');return false;" /></div>';
+        html += '<div class="name">'+data.name+'<input style="margin-left:10px;" type="button" value="Remove" onclick="if(!confirm(\'Are u sure?\')){return false;}schedule.unschedule(\''+data.uuid+'\');return false;" /></div>';
         html += '<div>Time: '+data.time+'</div>';
         html += '<div>Interval: '+data.interval+'</div>';
         if(data.timestamp != undefined){
@@ -57,54 +57,62 @@ schedule = {
         var jsonRequest = new Request.JSON({url: 'send.php?to=logic&uuid='+uuid+'&cmd=unschedule', onSuccess: function(data){}}).send();
     },
     showFormCmd: function(uuid){
-        var form = new Element('form', {'action' : ''});
-        var textarea = new Element('textarea', {'name' : 'myTextarea'});
+        var tmp;
+        var name = new Element('textarea', {'id':'value_cmd','value' : ''});
+        tmp = new Element('div', {html: 'Name:'});
+        name = tmp.adopt(name);
         var button = new Element('input', {'type' : 'button', 'value' : 'Add'});
-        var cancel = new Element('input', {'type' : 'button', 'value' : 'Cancel'});
+        tmp = new Element('div', {html: ''});
+        button = tmp.adopt(button);
         button.addEvent('click', function(event){
-            var self = this;
-            var jsonRequest = new Request.JSON({url: 'send.php?to=logic&uuid='+uuid+'&cmd=scheduleCommand&data='+this.parentNode.firstChild.value.replace(/\n/g,','), onSuccess: function(data){
+            var jsonRequest = new Request.JSON({url: 'send.php?to=logic&uuid='+uuid+'&cmd=scheduleCommand&data='+$('value_cmd').value.replace(/\n/g,','), onSuccess: function(data){
                 if(data.success != undefined && data.success){
-                    self.parentNode.parentNode.dispose();
+                    $('settings_pane').fade('out');
                 }
             }}).send();
             event.stopPropagation();
             event.preventDefault();
         });
-        cancel.addEvent('click', function(event){
-            this.parentNode.parentNode.dispose();
-            event.stopPropagation();
-            event.preventDefault();
-        });
-        el = new Element('div', {html: 'Add cmd:',class:'FormName',id:'frm_'+uuid});
-        el.adopt(form.adopt(textarea,button,cancel));
-        el.inject($('scheduleForm'),'top');
+        p = $('settings_pane').getElement('.parameters');
+        p.innerHTML='';
+        $('settings_pane').getElement('.remove').style.display = "none";
+        el = new Element('h1', {html: 'Add command:'});
+        el.inject(p);
+        p.adopt(name,button);
+        el.inject(p,'top');
+        $('settings_pane').fade('in');
     },
     showFormSchedule: function(){
-        var form = new Element('form', {'action' : ''});
-        var name = new Element('input', {'type':'text','name' : 'name','value' : 'name'});
-        var interval = new Element('input', {'type':'text','name' : 'interval','value' : 'interval'});
-        var time = new Element('input', {'type':'text','name' : 'time','value' : 'time'});
+        var tmp;
+        var name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : ''});
+        tmp = new Element('div', {html: 'Name:'});
+        name = tmp.adopt(name);
+        var interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : ''});
+        tmp = new Element('div', {html: 'Interval:'});
+        interval = tmp.adopt(interval);
+        var time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : ''});
+        tmp = new Element('div', {html: 'Time:'});
+        time = tmp.adopt(time);
         var button = new Element('input', {'type' : 'button', 'value' : 'Add'});
-        var cancel = new Element('input', {'type' : 'button', 'value' : 'Cancel'});
+        tmp = new Element('div', {html: ''});
+        button = tmp.adopt(button);
         button.addEvent('click', function(event){
-            var self = this;
-            var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmd=schedule&name='+this.parentNode.elements[0].value+'&interval='+this.parentNode.elements[1].value+'&time='+this.parentNode.elements[2].value, onSuccess: function(data){
+            var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmd=schedule&name='+$('value_name').value+'&interval='+$('value_interval').value+'&time='+$('value_time').value, onSuccess: function(data){
                 if(data.success != undefined && data.success){
-                    self.parentNode.parentNode.dispose();
+                    $('settings_pane').fade('out');
                 }
             }}).send();
             event.stopPropagation();
             event.preventDefault();
         });
-        cancel.addEvent('click', function(event){
-            this.parentNode.parentNode.dispose();
-            event.stopPropagation();
-            event.preventDefault();
-        });
-        el = new Element('div', {html: 'Add New Schedule:',class:'FormName'});
-        el.adopt(form.adopt(name,interval,time,button,cancel));
-        el.inject($('scheduleForm'),'top');
+        p = $('settings_pane').getElement('.parameters');
+        p.innerHTML='';
+        $('settings_pane').getElement('.remove').style.display = "none";
+        el = new Element('h1', {html: 'New Schedule:'});
+        el.inject(p);
+        p.adopt(name,interval,time,button);
+        el.inject(p,'top');
+        $('settings_pane').fade('in');
     }
 
 
