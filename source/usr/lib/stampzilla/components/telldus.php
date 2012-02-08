@@ -121,7 +121,6 @@ class telldus extends component {
                         else
                             $m = 'off';
                         $this->setState($temp['house'].'_'.$temp['group'].'_'.$temp['unit'].'_'.$m.'.button',true);
-                        sleep(1);
                         $this->setState($temp['house'].'_'.$temp['group'].'_'.$temp['unit'].'_'.$m.'.button',false);
                     }
                     

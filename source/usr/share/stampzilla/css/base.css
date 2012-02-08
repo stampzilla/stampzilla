@@ -441,6 +441,7 @@ input.saving {
 }
 #scheduleContent .scheduleItem .name {
     font-size:20px;
+    cursor:pointer;
 }
 #scheduleContent .scheduleItem .cmds {
     float:right;
