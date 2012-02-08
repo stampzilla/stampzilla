@@ -94,6 +94,7 @@ schedule = {
             var button = new Element('input', {'type' : 'button', 'value' : 'Update'});
             $('settings_pane').getElement('.remove').style.display = "block";
             $('settings_pane').getElement('.remove').onclick = function() {if(!confirm('are u sure?')){ return false; }schedule.unschedule(uuid); $('settings_pane').fade('out'); return false;};
+            el = new Element('h1', {html: 'Edit schedule:'});
         }
         else{
             var name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : ''});
@@ -101,6 +102,7 @@ schedule = {
             var time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : ''});
             var button = new Element('input', {'type' : 'button', 'value' : 'Add'});
             $('settings_pane').getElement('.remove').style.display = "none";
+            el = new Element('h1', {html: 'New Schedule:'});
         }
         tmp = new Element('div', {html: 'Name:'});
         name = tmp.adopt(name);
@@ -125,7 +127,6 @@ schedule = {
         });
         p = $('settings_pane').getElement('.parameters');
         p.innerHTML='';
-        el = new Element('h1', {html: 'New Schedule:'});
         el.inject(p);
         p.adopt(name,interval,time,button);
         el.inject(p,'top');
