@@ -45,6 +45,7 @@ func udpRunner() {
     }
 
     for {
+        //fmt.Print("calling handlejson from forloop...\n")
         handleJSON(conn)
     }
 }
@@ -57,28 +58,33 @@ func main(){
 func handleJSON(conn *net.UDPConn) {
 
     // Read in the message to the buffer 
-    stop, _, err := conn.ReadFromUDP(buf[:])
+    //fmt.Print("start ReadFromUDP...\n")
+    stop, _, err := conn.ReadFromUDP(buf[0:])
     if err != nil {
+        fmt.Print("err in ReadFromUDP...\n")
         return
     }
-    data := string(buf[:stop]);
+    //fmt.Print("ReadFromUDP done...\n")
 
     // Send the message to all active clients
+    //fmt.Print("before for loop sessions stop:"+string((int)(stop))+"..\n")
     for i,xi := range sessions {
         _,test := sessions[i];
         if test {
             //fmt.Print("Write chan ",i,"... ");
 
             // Special to fix no-blocking, could hapend if one channel buffer is full
+            //fmt.Print("select case xi<- string...\n")
             select {
-                case xi <- data:
+                case xi <- string(buf[0:stop]):
+                default:
+                    continue
             }
 
             //fmt.Print("done\n");
         }
     }
-    
-    //fmt.Print("JSON from ",addr.IP,": \n");
+    //fmt.Print("for loop done..\n");
 }
 
 func PushServer(w http.ResponseWriter, req *http.Request) {
@@ -141,6 +147,7 @@ func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {
     // Wait for a message or timeout
     select {
         case msg := <-channel:
+            //fmt.Print("Starting WriteString...\n")
             io.WriteString(w, "window.sape.recive("+msg+");")
             //fmt.Print("window.sape.recive("+msg+");\n")
             return
