@@ -8,7 +8,23 @@ require_once '../lib/ads.php';
 class beckhoff extends component {
 
     protected $componentclasses = array('controller');
-    protected $settings = array();
+    protected $settings = array(
+        'tpy'=>array(
+            'type'=>'text',
+            'name' => 'TPY file',
+            'required' => true
+        ),
+        'ip'=>array(
+            'type'=>'text',
+            'name' => 'PLC ip',
+            'required' => true
+        ),
+        'source'=>array(
+            'type'=>'text',
+            'name' => 'Source net id',
+            'required' => true
+        )
+	);
     protected $commands = array(
         'set' => 'Turns on leds.',
         'reset' => 'Turns off leds.',
@@ -16,8 +32,14 @@ class beckhoff extends component {
     );
 
     function startup() {
-        $this->child = new ads( "172.16.21.4","172.16.21.4.1.1",801,"172.16.21.2.1.1",803 );
-        $this->child->tpy('/beckhoff/food.tpy');
+		$ip = $this->setting('ip');
+		$host = $this->setting('source');
+		$tpy = $this->setting('tpy');
+
+		if ( $ip && $host && $tpy ) {
+			$this->child = new ads( $ip,$ip.".1.1",801,$host,803 );
+			$this->child->tpy($tpy);
+		}
 
         if ( !is_dir("/var/spool/stampzilla/beckhoff") )
             if ( !mkdir("/var/spool/stampzilla/beckhoff") ) {
@@ -30,7 +52,14 @@ class beckhoff extends component {
 	}
 
 	function set($pkt) {
+		if ( !isset($pkt['value']) )
+			$pkt['value'] = true;
+
 		$this->write('.Interface.'.$pkt['tag'],$pkt['value'],$pkt);
+	}
+
+	function reset($pkt) {
+		$this->write('.Interface.'.$pkt['tag'],0,$pkt);
 	}
 
     function write($tag,$value,$ack=null){
@@ -42,6 +71,10 @@ class beckhoff extends component {
     }
 
     function _child() {
+		if ( !isset($this->child) ) {
+			sleep(1000);
+			return;
+		}
         $this->data = $this->child->read('.Interface');
 
         if ( !isset($this->prev) || $this->data != $this->prev ) {
