@@ -110,6 +110,45 @@ room = {
                     eval("buttons[button].getElement('.state').innerHTML = this.states[node]"+p+";");
                 }
             }
+
+            sliders = $$('.room .slider');
+            for( slider in sliders ) {
+                if ( sliders[slider].data == undefined || sliders[slider].data.state == undefined) {
+                    continue;
+                }
+
+
+				root = sliders[slider].data.state;
+				path = root.split('.');
+                node = path[0];
+
+                delete path[0];
+                p = '';
+                for( key in path ) {
+                    if ( typeof path[key] == 'function' ) {
+                        continue;
+                    }
+
+                    n = path[key];
+
+                    if ( n-0 == n && n.length>0 ) {
+                        p += '['+n+']';
+                    } else {
+                        p += '.'+n;
+                    }
+
+                    eval("if ( this.states[node]"+p+" == undefined ) {this.states[node]"+p+" = {};}");
+                }
+                value = eval("this.states[node]"+p+";");
+				value -= sliders[slider].data.min;
+				value /= sliders[slider].data.max;
+				value *= sliders[slider].factor*(sliders[slider].data.max/sliders[slider].data.step);
+
+				if ( -value != NaN && sliders[slider].scrollvalue != value && sliders[slider].data.active != true ) {
+					sliders[slider].scroller.scrollTo(0,-value,200);
+					sliders[slider].scrollvalue = value;
+				}
+			}
         } catch (er) {
             //alert(er.message);
         }
@@ -169,6 +208,65 @@ room = {
             }
         }
 
+        list = new Array();
+
+        if ( room.rooms[uuid].sliders != undefined ) {
+            for( slider in room.rooms[uuid].sliders ) {
+                if ( room.rooms[uuid].sliders[slider].title == undefined )
+                    continue;
+
+				//room.rooms[uuid].sliders[slider].step = 10;
+                
+                list.push(slider);
+
+                if ( $('slider_'+uuid+'_'+slider) == undefined ) {
+                    el = new Element('div', {
+                        id: 'slider_'+uuid+'_'+slider,
+                        class: 'slider',
+                        style: 'position:absolute;'
+                    });
+                    el.innerHTML = '<span class="head"></span><div class="scrollwrapper"><div class="scrollcontent"></div></div>';
+                    $('page_'+uuid).adopt(el);
+
+					el.scroller = new iScroll(el.getElement('.scrollwrapper'),{
+						momentum: false
+					});
+
+					el.scroller.options.onScrollMove=room.liveUpdate;
+					el.scroller.options.onScrollEnd=room.finalUpdate;
+                } else {
+                    el = $('slider_'+uuid+'_'+slider);
+                }
+
+                el.data = room.rooms[uuid].sliders[slider];
+                el.room = uuid;
+                el.uuid = button;
+                el.data.position = el.data.position.split(',');
+                el.getElement('.head').innerHTML = el.data.title;
+
+				content = '';
+				for (var i=room.rooms[uuid].sliders[slider].min;i<=room.rooms[uuid].sliders[slider].max;i+=room.rooms[uuid].sliders[slider].step) {
+					content += '<div class="scrollvalue">'+i+'</div>';
+				}
+				el.getElement('.scrollcontent').innerHTML = content;
+            }
+        }
+
+        /*sliders = $$('#page_'+uuid+' .slider');
+        for( slider in sliders ) {
+            if ( sliders[slider].data == undefined ) {
+                continue;
+            }
+
+            if ( list.indexOf(sliders[slider].uuid) == -1 ) {
+				$(sliders[slider]).scroller.destroy();
+				$(sliders[slider]).scroller = null;
+
+                $(sliders[slider]).dispose();
+            }
+        }*/
+
+
         this.renderStates();
 
         editmode.render();
@@ -201,6 +299,35 @@ room = {
             }
         }
 
+        buttons = $$('.room .slider');
+        for( button in buttons ) {
+            if ( buttons[button].data == undefined ) {
+                continue;
+            }
+            if ( orient == 0 || orient == 180 ) {
+                buttons[button].style.left = buttons[button].data.position[1]+'px';
+                buttons[button].style.bottom = buttons[button].data.position[0]+'px';
+                buttons[button].style.top = '';
+                buttons[button].style.width = buttons[button].data.position[3]+'px';
+                buttons[button].style.height = buttons[button].data.position[2]+'px';
+            } else {
+                buttons[button].style.left = buttons[button].data.position[0]+'px';
+                buttons[button].style.top = buttons[button].data.position[1]+'px';
+                buttons[button].style.bottom = '';
+                buttons[button].style.width = buttons[button].data.position[2]+'px';
+                buttons[button].style.height = buttons[button].data.position[3]+'px';
+            }
+
+			buttons[button].factor = buttons[button].getStyle('height').toInt()/2;
+			$(buttons[button]).scroller.maxScrollY = -(buttons[button].factor*((buttons[button].data.max-buttons[button].data.min)/buttons[button].data.step));
+
+			$(buttons[button]).getElements('.scrollvalue').setStyle('font-size',buttons[button].factor/2);
+			$(buttons[button]).getElements('.scrollvalue').setStyle('height',buttons[button].factor);
+			$(buttons[button]).getElement('.scrollcontent').setStyle('padding-top',buttons[button].factor/2);
+			$(buttons[button]).getElement('.scrollcontent').setStyle('padding-bottom',buttons[button].factor/2);
+
+			//buttons[button].scroller.refresh();
+        }
     },
     button:function(obj) {
         if ( !editmode.active ) {
@@ -254,6 +381,48 @@ room = {
                 $(buttons[button]).highlight("#ff0000");
             }
         }
-    }
+    },
+	liveUpdate: function() {
+        clearTimeout(pressTimer);
+		if ( this.scroller != undefined && !isNaN(this.y) ) {
+			value = (-this.y/this.wrapper.parentNode.factor/(this.wrapper.parentNode.data.max/this.wrapper.parentNode.data.step)) * this.wrapper.parentNode.data.max + this.wrapper.parentNode.data.min;
+
+			if ( value > this.wrapper.parentNode.data.max ) value = this.wrapper.parentNode.data.max;
+			if ( value < this.wrapper.parentNode.data.min ) value = this.wrapper.parentNode.data.min;
+
+			if ( !this.wrapper.parentNode.data.running ) {
+				this.wrapper.parentNode.data.running = true;
+				this.wrapper.parentNode.data.active = true;
+				room.startLiveUpdater(this);
+			}
+			this.wrapper.parentNode.data.value = Math.round(value);
+		}
+	},
+	finalUpdate: function() {
+		this.wrapper.parentNode.data.last = true;
+		this.wrapper.parentNode.data.active = true;
+		document.title = "end";
+		room.liveUpdate(this);
+		this.wrapper.parentNode.data.running = false;
+	},
+	startLiveUpdater: function(obj) {
+		if ( obj.wrapper != undefined && obj.wrapper.parentNode.data.active ) {
+			if ( !isNaN(obj.wrapper.parentNode.data.value) && obj.wrapper.parentNode.data.value != undefined && (obj.wrapper.parentNode.data.prev != obj.wrapper.parentNode.data.value||obj.wrapper.parentNode.data.last)) {
+
+				obj.wrapper.parentNode.data.prev = obj.wrapper.parentNode.data.value;
+				obj.wrapper.parentNode.data.last = false;
+
+				cmd = obj.wrapper.parentNode.data.cmd.replace('%VALUE%',obj.wrapper.parentNode.data.value);
+				new Request({
+					url: "send.php?to="+obj.wrapper.parentNode.data.component+"&cmd="+cmd,
+					onComplete: function() {
+						room.startLiveUpdater(obj);
+					}
+				}).send();
+			} else {
+				obj.wrapper.parentNode.data.running = false;
+			}
+		}
+	}
 }
 
