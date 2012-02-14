@@ -117,6 +117,8 @@ function note($level,$text) {
     global $args;
     if ( in_array('d',$args['flags']) || $level < warning )
         printout(format($level,$text));
+
+	return false;
 }
 
 function printout( $text ) {

@@ -347,6 +347,8 @@ class component {
         if ( $this->hashed )
             return;
 
+		$prev = $this->state;
+
         switch( func_num_args() ) {
             case 1:
                 $list = func_get_args();
@@ -360,7 +362,9 @@ class component {
                 $this->setStatePath($key,$value);
                 break;
         }
-        $this->sendState();
+
+		if ( $prev != $this->state )
+	        $this->sendState();
     }/*}}}*/
     function sendState() {/*{{{*/
         if ( $this->hashed )
