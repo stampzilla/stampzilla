@@ -362,6 +362,32 @@ iframe {
     text-align:center;
 }
 
+
+
+.page.room .slider {
+    background:#111;
+    border:2px solid #00f;
+    -moz-border-radius:5px;
+    -webkit-border-radius:5px;
+    text-align:center;
+    overflow:hidden;
+    opacity:0.8;
+    position:relative;
+}
+
+.page.room .slider .head {
+	position:absolute;
+	top:0px;
+	left:0px;
+	width:100%;
+}
+
+.page.room .slider .scrollwrapper {
+	width:100%;
+	height:100%;
+	overflow:hidden;
+}
+
 .page.room .button .handle {
     position:absolute;
     right:0px;

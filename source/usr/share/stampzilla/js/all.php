@@ -7,7 +7,7 @@ echo file_get_contents("mootools-core-1.3-full-compat-yc.js");
 
 $files = scandir('.');
 foreach($files as $key => $line) {
-	if ( substr($line,-3) != '.js' || $line == "mootools-core-1.3-full-compat-yc.js" || $line == "mif.tree-v1.2.6.4.js" || $line == "sape.transport.js")
+	if ( substr($line,-3) != '.js' || $line == "mootools-core-1.3-full-compat-yc.js" || $line == "mif.tree-v1.2.6.4.js" || $line == "sape.transport.js" || $line == 'iScroll.js')
 		continue;
 	
 	echo file_get_contents($line);

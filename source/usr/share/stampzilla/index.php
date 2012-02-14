@@ -76,6 +76,7 @@ $layout = array(
         <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
 
         <script type="text/javascript" src="js/all.php"></script>
+        <script type="text/javascript" src="js/iScroll.js"></script>
 
         <link href="css/base.css" rel="stylesheet" />
         <link href="css/editmode.css" rel="stylesheet" />
