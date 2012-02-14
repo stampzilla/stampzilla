@@ -58,7 +58,7 @@ class squeezebox extends component {
 
             $this->send("players 0 999 \n");
             //$this->send("listen 1\n");
-            $this->send("subscribe alarm,pause,play,stop,client\n");
+            $this->send("subscribe alarm,pause,play,stop,client,mixer\n");
         }
     }
 
@@ -175,6 +175,7 @@ class squeezebox extends component {
                                     $this->setState($main.'.title',$data[2]);
 									break;
 							}
+                        */
                         case 'mixer':
                             switch($data[1]) {
                                 case 'volume':
@@ -183,6 +184,7 @@ class squeezebox extends component {
                                     break;
                             }
                             break;
+                        /*
                         case 'prefset':
                             switch($data[1]) {
                                 case 'server';
