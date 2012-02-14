@@ -33,11 +33,13 @@ class linux extends component {
 		}
 	}
 	function wake() {
-		return exec("gnome-screensaver-command -d");
+		exec("gnome-screensaver-command -d");
+		return true;
 		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s reset"); // Blank screen
 	}
-	function screensaver) {
-		return exec("gnome-screensaver-command -a");
+	function screensaver() {
+		exec("gnome-screensaver-command -a");
+		return true;
 		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s activate"); // Blank screen
 	}
 
@@ -46,9 +48,15 @@ class linux extends component {
 		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"Monitor is\" | awk '{print $3}'");
 	}
 
+// X11 - Screensaver
+	function screensaver_status() {
+		exec("gnome-screensaver-command -q",$ret);
+		return $ret;
+	}
+
 // ALSA
 	function ALSA_status() {
-		exec('amixer',$ret);
+		exec('amixer 2>1',$ret);
 	
 		// Only parse if content have changed
 		if ( !isset($this->prev_alsa) || $this->prev_alsa != $ret )
@@ -112,6 +120,7 @@ class linux extends component {
 		$this->intercom(array(
 			'DPMS' => $this->DPMS_status(),
 			'ALSA' => $this->ALSA_status(),
+			'Screensaver' => $this->screensaver_status(),
 		));
 		sleep(1);
 	}
