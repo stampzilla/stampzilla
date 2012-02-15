@@ -26,6 +26,7 @@ function listActive() {/*{{{*/
                 continue;
 
 	    	$pwd = getPwdX($pid);
+            $pwd = str_replace(' (deleted)','',$pwd);
 
             // Ignore scripts that dont belong to stampzilla (different pwd)
             if ( $pwd != getcwd() )

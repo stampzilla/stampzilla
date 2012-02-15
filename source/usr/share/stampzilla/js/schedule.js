@@ -1,11 +1,12 @@
 schedule = {
     clear: function() {
-        $('schedule').innerHTML = '';
+        $('scheduleContent').innerHTML = '<h3>Start Logic daemon to use schedule</h3>';
     },
     add: function(data) {
         schedule.schedule = data;
         var val = null;
         $$('.scheduleItem').addClass('invalid');
+        $('scheduleContent').innerHTML = '';
         for(var uuid in data) {
             val = data[uuid];
             
