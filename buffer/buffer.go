@@ -134,8 +134,16 @@ func PushServer(w http.ResponseWriter, req *http.Request) {
 
     //fmt.Print("New connection ",id,", wait for data...\n");
 
+    fmt.Print("Querystring:"+ req.URL.RawQuery+"\n");
+    for k, val := range req.URL.Query() {
+        fmt.Print("Query():"+ k +" - "+val[0]+"\n");
+    }
     // Start wait for data
-    writeToHttpFromChan(w,channel);
+    if ( req.URL.RawQuery == "start&1" ) {
+        io.WriteString(w, "window.sape.onInit();")
+    }else{
+        writeToHttpFromChan(w,channel);
+    }
 }
 
 func writeToHttpFromChan( w http.ResponseWriter, channel chan string ) {

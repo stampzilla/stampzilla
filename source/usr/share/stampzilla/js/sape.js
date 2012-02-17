@@ -36,8 +36,10 @@ sape = new Class({
 		doc.write(theHtml);
 		doc.close();
 
-		communicationReady();
 	},
+    ready:function(){
+		communicationReady();
+    },
 	recive:function(data) {
 		incoming(data);
 	}
