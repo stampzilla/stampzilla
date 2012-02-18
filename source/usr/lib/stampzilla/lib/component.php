@@ -376,7 +376,7 @@ class component {
         if ( $this->hashed )
             return;
 
-        $this->state['node']['memory'] = memory_get_usage();
+        //$this->state['node']['memory'] = memory_get_usage();
 
         $this->broadcast( array(
             'type' => 'state',

@@ -55,7 +55,9 @@ class linux extends component {
 	function wake() {
 		if ( isset($this->active['gnome-screensaver']) ) {
 			note(notice,'Deactivating gnome-screensaver');
-			exec("gnome-screensaver-command -d");
+			exec("DISPLAY=:0 gnome-screensaver-command -d");
+			$this->setState('screensaver',$this->gnome_screensaver_status());
+
 			return true;
 		} else {
 			note(notice,'Dectivates screen blanking with xset');
@@ -64,9 +66,13 @@ class linux extends component {
 	}
 	function screensaver() {
 		if ( isset($this->active['gnome-screensaver']) ) {
+			if ( $this->state['screensaver'] == true )
+				return $this->wake();
+
 			note(notice,'Activating gnome-screensaver');
-			exec("gnome-screensaver-command -a",$ret);
-			print_r($ret);
+			exec("DISPLAY=:0 gnome-screensaver-command -a",$ret);
+			$this->setState('screensaver',$this->gnome_screensaver_status());
+
 			return true;
 		} else {
 			note(notice,'Activates screen blanking with xset');
@@ -81,17 +87,17 @@ class linux extends component {
 
 // X11 - Gnome-screensaver
 	function gnome_screensaver_status() {
-		exec("gnome-screensaver-command -q",$ret);
-
-		if ( $ret[0] == 'The screensaver is inactive' ) {
+		exec("DISPLAY=:0 gnome-screensaver-command -q",$ret);
+	
+		if ( isset($ret[0]) && $ret[0] == 'The screensaver is inactive' ) {
 			return false;
 		}
 
-		if ( $ret[0] == 'The screensaver is active' ) {
+		if ( isset($ret[0]) && $ret[0] == 'The screensaver is active' ) {
 			return true;
 		}
 
-		return false;
+		return 'invalid';
 	}
 
 // ALSA
@@ -160,13 +166,13 @@ class linux extends component {
 		$status = array();
 
 		if ( isset($this->active['dpms']) )
-			$status['DPMS'] = $this->DPMS_status();
+			$status['dpms'] = $this->DPMS_status();
 
 		if ( isset($this->active['alsa']) )
-			$status['ALSA'] = $this->ALSA_status();
+			$status['alsa'] = $this->ALSA_status();
 
 		if ( isset($this->active['gnome-screensaver']) )
-			$status['Screensaver'] = $this->gnome_screensaver_status();
+			$status['screensaver'] = $this->gnome_screensaver_status();
 
 		if ( $status ) 
 			$this->intercom($status);
