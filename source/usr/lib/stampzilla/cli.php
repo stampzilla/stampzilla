@@ -332,6 +332,18 @@ function command($cmd,$pwd = '',$args=array()) {
                 echo $pkt['from']." - ".format($pkt['level'],$pkt['message']);
             }
 /*}}}*/
+        case 'dump':/*{{{*/
+            require_once("lib/udp.php");
+            require_once("lib/errorhandler.php");
+
+            $udp = new udp('0.0.0.0','255.255.255.255',8282);
+            while(1) {
+                if ( !$pkt = $udp->listen() )
+                    continue;
+
+				print_r($pkt);
+            }
+/*}}}*/
         case 'changelog':/*{{{*/
             $log = file_get_contents('https://api.github.com/networks/stampzilla/stampzilla/events');
             $log = json_decode($log,true);
