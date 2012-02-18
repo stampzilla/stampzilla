@@ -122,12 +122,15 @@ function note($level,$text) {
 }
 
 function printout( $text ) {
-	global $lastprint,$headprint;
+	global $lastprint,$headprint,$args;
 
 	if ( time() - $lastprint > 2 ) {
-		echo "\n----[ ".errorhandler::currentTime(true)." ]--------------------------\n";
+		if ( !in_array('g',$args['flags']) ) {
+			echo "\n----[ ".errorhandler::currentTime(true)." ]--------------------------\n";
+		}
+
 		$headprint = microtime(true);
-	}
+	} 
 	$lastprint = time();
 
 	echo $text;

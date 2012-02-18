@@ -348,6 +348,60 @@ function command($cmd,$pwd = '',$args=array()) {
                 }
             }
             break;/*}}}*/
+		case 'config':
+			DEFINE('INHIBIT_START',1);
+
+			if ( !is_file($arg[1]) )
+				return note(warning,'File "'.$arg[1].'" do not exist!');
+
+			ob_start();
+			include $arg[1];
+			ob_end_clean();
+
+			global $args,$node;
+			$args['flags'][] = 'd'; // activate debug
+			$args['flags'][] = 'g'; // disable grouping
+
+			$node->read_settings();
+
+			if ( !$node->get_settings() )
+				return note(notice,'Component do not have any settings!');
+
+			echo "\nConfig file: /etc/stampzilla/".$node->peer.".yml\n\n";
+
+			echo "Syntax: parameter name [current value]: new value\n";
+			echo "    Tip: Press ctrl+c to abort\n";
+			echo "    Tip: Press enter to leave the current parameter value without modifying it.\n\n";
+
+			$handle = fopen ("php://stdin","r");
+			foreach($node->get_settings() as $key => $line) {
+				if ( !isset($line['value']) )
+					$line['value'] = '';
+
+				echo $key." [".$line['value']."]: ";
+
+				$ok = false;
+				while ( !$ok ) {
+					$val = trim(fgets($handle));
+					if ( $val ) {
+						$ret = $node->set_setting($key,$val);
+						if ( $ret === true ) 
+							$ok = true;
+						else {
+							note(warning,"Failed to save: ".$ret);
+							echo $key." [".$line['value']."]: ";
+						}
+					} elseif ( $line['required'] && !$line['value'] ) {
+							note(warning,"Required parameter, try again!");
+							echo $key." [".$line['value']."]: ";
+					} else {
+						$ok = true;
+					}
+					//echo $line."\n";
+				}
+			}
+
+			break;
         default:
             if ( count($arg) == 2 ) {
                 passthru("php send.php \"to={$arg[0]}&cmd={$arg[1]}\" -".implode($args['flags'],"-") );

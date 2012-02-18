@@ -35,6 +35,12 @@ class component {
         if($id)
             $this->peer = $id;
 
+		if ( DEFINED('INHIBIT_START') ) {
+			global $node;
+			$node = $this;
+			return;
+		}
+
         // Create a name if the node dosnt have one
         if ( !$this->peer ) {
             $this->peer = md5(time());
@@ -401,30 +407,38 @@ class component {
         // Fail if the setting key is not defined
         if ( !isset($this->settings[$pkt['key']]) )
             return $this->nak($pkt,array('msg' => 'Unknown setting "'.$pkt['key'].'"','value'=>''));
-
+	
+		if ( $err = $this->set_setting($pkt['key'],$pkt['value']) === true ) {
+			note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
+	        $this->ack($pkt,array('value'=>$pkt['value']));
+		} else {
+            $this->nak($pkt,array('msg' => $err,'value'=>''));
+		}
+    }/*}}}*/
+	function set_setting($key,$value) {
         $file = '/etc/stampzilla/'.$this->peer.'.yml';
 
         // Check if file exists
         if ( !is_file($file) )
-            return $this->nak($pkt,array('msg' => "Config file ($file) is missing!",'value'=>''));
+			if ( !touch($file) )
+	            return "Failed to create config file ($file)!";
 
         // Try to read the settings file (yml)
         $data = spyc_load_file($file);
 
-        $data[$pkt['key']] = $pkt['value'];
+        $data[$key] = $value;
     
         $string = Spyc::YAMLDump($data);
 
         if ( !file_put_contents($file,$string) )
-            return $this->nak($pkt,array('msg' => "Failed to save config file ($file)!",'value'=>''));
+            return "Failed to save config file ($file)!";
     
         if ( is_callable(array($this,'setting_saved')) ) {
-            $this->setting_saved($pkt['key'],$pkt['value']);
+            return $this->setting_saved($key,$value);
         }
 
-        note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
-        $this->ack($pkt,array('value'=>$pkt['value']));
-    }/*}}}*/
+		return true;
+	}
     function read_settings() {/*{{{*/
         // Check if there are any settings defined
         if ( !isset($this->settings) )
@@ -446,6 +460,9 @@ class component {
 
         return true;
     }/*}}}*/
+	function get_settings() {
+		return $this->settings;
+	}
     function setting($key) {/*{{{*/
         if ( !isset($this->settings[$key]['value']) )
             return;
