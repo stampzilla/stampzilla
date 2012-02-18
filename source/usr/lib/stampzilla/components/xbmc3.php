@@ -41,8 +41,12 @@ class xbmc3 extends component {
 
         $this->json('JSONRPC.Version');
         $this->json('Player.GetActivePlayers');
-		$this->json('VideoLibrary.GetTVShows');
+		//$this->json('VideoLibrary.GetTVShows');
     }/*}}}*/
+
+	function notify($pkt) {
+		$this->json('JSONRPC.NotifyAll',array('stampzilla',$pkt['message']),$pkt);
+	}
 
     function intercom_event($event){
 
@@ -54,16 +58,17 @@ class xbmc3 extends component {
         }/*}}}*/
         // Handle error messages/*{{{*/
         if(isset($event->error)){
-            if ( $this->lastcmd[$event->id]['var']['to'] )
+            if ( isset($this->lastcmd[$event->id]['var']['to']) )
                 $this->nak( $this->lastcmd[$event->id]['var'] );
 
-            return trigger_error($event->error->message,E_USER_WARNING);
+            return trigger_error($event->error->message." (".$event->error->data->stack->message.")",E_USER_WARNING);
         };/*}}}*/
 
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
             $cmd = $this->lastcmd[$event->id]['data'];
             $var = $this->lastcmd[$event->id]['var'];
+            $params = $this->lastcmd[$event->id]['params'];
             unset($this->lastcmd[$event->id]);
 
             switch($cmd['method']) {
@@ -76,16 +81,47 @@ class xbmc3 extends component {
                     }
                     break;
                 case 'Player.GetActivePlayers':
+					$found = array();
 					foreach ( $event->result as $player ) {
 						$this->players[$player->playerid]['type'] = $player->type;
+						$found[$player->playerid] = true;
 					}
-				print_r($event->result);
+
+					foreach( $this->players as $key => $line ) {
+						if ( !isset($found[$key]) ) {
+							unset($this->players[$key]['media']);
+							$this->players[$key]['playing'] = false;
+						}
+					}
                         
 					$this->setPlayerStates();
 
                     break;
 				case 'VideoLibrary.GetTVShows':
 				print_r($event->result);
+					break;
+				case 'Player.GetItem':
+					$this->players[$params[0]]['media'] = $event->result->item;
+					$this->setPlayerStates();
+					break;
+				case 'Player.GetProperties':
+					foreach( $event->result as $key => $line ) {
+						switch ($key) {
+							case 'speed':
+								if ( $line == 0 )
+									$this->players[$params[0]]['playing'] = false;
+								else
+									$this->players[$params[0]]['playing'] = true;
+								break;
+							default:
+								$this->players[$params[0]][$key] = $line;
+								break;
+						}
+					}
+					$this->setPlayerStates();
+					break;
+				default:
+					print_r($event);
 					break;
             }
 
@@ -101,7 +137,7 @@ class xbmc3 extends component {
 						if ( !isset($this->players[$id]) )
 							$this->players[$id] = array();
 
-						$this->players[$id]['state'] = true;
+						$this->players[$id]['playing'] = true;
 
 						$this->setPlayerStates();
 
@@ -112,9 +148,18 @@ class xbmc3 extends component {
 						if ( !isset($this->players[$id]) )
 							$this->players[$id] = array();
 
-						$this->players[$id]['state'] = false;
+						$this->players[$id]['playing'] = false;
 
 						$this->setPlayerStates();
+						break;
+					case 'Player.OnStop':
+						$this->json('Player.GetActivePlayers');
+						break;
+					case 'GUI.OnScreensaverActivated':
+						$this->setState('screensaver',true);
+						break;
+					case 'GUI.OnScreensaverDeactivated':
+						$this->setState('screensaver',false);
 						break;
 				}
             }
@@ -122,13 +167,14 @@ class xbmc3 extends component {
     }
 
 	function setPlayerStates() {
-		print_r($this->players);
 		foreach($this->players as $key => $line) {
-			if ( !isset($line['state']) )
-				continue;
-
 			if ( isset($line['type']) ) {
-				$this->setState($line['type'],$line['state']);
+				if ( !isset($line['playing']) ) 
+					$this->json('Player.GetProperties',array($key,array('speed')));
+				elseif ( $line['playing'] && !isset($line['media']) ) 
+					$this->json('Player.GetItem',array($key));
+
+				$this->setState($line['type'],$line);
 			} else {
 				return $this->json('Player.GetActivePlayers');
 			}
@@ -155,13 +201,14 @@ class xbmc3 extends component {
         if($params==null)
             unset($data['params']);
 
-        $this->lastcmd[$this->id] = array('var'=>$var,'data'=>$data);
+        $this->lastcmd[$this->id] = array('var'=>$var,'params'=>$params,'data'=>$data);
         $text =  json_encode($data);
+
         return $this->send($text);
     }/*}}}*/
 
     function send($text){/*{{{*/
-        note(debug,$text);
+        note(notice,$text);
         return socket_write($this->socket,$text."\n\r",strlen($text));
     }/*}}}*/
 
@@ -182,7 +229,13 @@ class xbmc3 extends component {
 
 }
 
+$hostname = exec('hostname');
+if ( !$hostname ) {
+	note(critical,'Failed to get hostname (exec hostname)');
+	die();
+}
+
 $xbmc3 = new xbmc3();
-$xbmc3->start('xbmc','readSocket');
+$xbmc3->start($hostname.'_xbmc3','readSocket');
 
 ?>
