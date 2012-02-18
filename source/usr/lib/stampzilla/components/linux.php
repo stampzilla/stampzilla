@@ -9,19 +9,36 @@ class linux extends component {
     protected $commands = array(
     );
 
+	function startup() {
+		$this->active = array();
+
+		if ( exec('pidof X') ) 
+			$this->active['dpms'] = true;
+
+		if ( exec('pidof gnome-screensaver') ) 
+			$this->active['gnome-screensaver'] = true;
+
+		if ( exec('pidof pulseaudio') ) 
+			$this->active['pulseaudio'] = true;
+		else
+			$this->active['alsa'] = true;
+
+		note(notice, 'Active capabilities: '.implode(array_keys($this->active),', ') );
+	}
+
 // X11 tools
 	function xauth() {
 		if ( !isset($this->xauth) ) {
-			if ( !$pid = exec('pidof xinit') )
-				return note(warning,'Could not find pid of xinit');
+			if ( !$pid = exec('pidof X') )
+				return note(warning,'Could not find pid of X');
 
-			if ( !$data = file_get_contents("/proc/$pid/environ") )
-				return note(warning,"Cound not read pid info (/proc/$pid/environ)");
+			if ( !$data = file_get_contents("/proc/$pid/cmdline") )
+				return note(warning,"Cound not read pid info (/proc/$pid/line)");
 
 			$data = explode(chr(0),$data);
-			foreach($data as $line) {
-				if ( substr($line,0,10) == 'XAUTHORITY' ) {
-					$auth = substr($line,11);
+			foreach($data as $key => $line) {
+				if ( $line == "-auth" ) {
+					$auth = $data[$key+1];
 					break;
 				}
 			}
@@ -30,17 +47,31 @@ class linux extends component {
 				return note(warning,'Could not find XAUTHORITY in xinit process environment');
 
 			$this->xauth = $auth;
+			note(debug,'Found XAUTHORITY in '.$auth);
 		}
+
+		return $this->xauth;
 	}
 	function wake() {
-		exec("gnome-screensaver-command -d");
-		return true;
-		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s reset"); // Blank screen
+		if ( isset($this->active['gnome-screensaver']) ) {
+			note(notice,'Deactivating gnome-screensaver');
+			exec("gnome-screensaver-command -d");
+			return true;
+		} else {
+			note(notice,'Dectivates screen blanking with xset');
+			return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s reset"); // Blank screen
+		}
 	}
 	function screensaver() {
-		exec("gnome-screensaver-command -a");
-		return true;
-		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s activate"); // Blank screen
+		if ( isset($this->active['gnome-screensaver']) ) {
+			note(notice,'Activating gnome-screensaver');
+			exec("gnome-screensaver-command -a",$ret);
+			print_r($ret);
+			return true;
+		} else {
+			note(notice,'Activates screen blanking with xset');
+			return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset s activate"); // Blank screen
+		}
 	}
 
 // X11 - DPMS
@@ -48,15 +79,24 @@ class linux extends component {
 		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"Monitor is\" | awk '{print $3}'");
 	}
 
-// X11 - Screensaver
-	function screensaver_status() {
+// X11 - Gnome-screensaver
+	function gnome_screensaver_status() {
 		exec("gnome-screensaver-command -q",$ret);
-		return $ret;
+
+		if ( $ret[0] == 'The screensaver is inactive' ) {
+			return false;
+		}
+
+		if ( $ret[0] == 'The screensaver is active' ) {
+			return true;
+		}
+
+		return false;
 	}
 
 // ALSA
 	function ALSA_status() {
-		exec('amixer 2>1',$ret);
+		exec('amixer 2>/dev/null',$ret);
 	
 		// Only parse if content have changed
 		if ( !isset($this->prev_alsa) || $this->prev_alsa != $ret )
@@ -117,11 +157,19 @@ class linux extends component {
 		$this->setState($status);
 	}
 	function _child() {
-		$this->intercom(array(
-			'DPMS' => $this->DPMS_status(),
-			'ALSA' => $this->ALSA_status(),
-			'Screensaver' => $this->screensaver_status(),
-		));
+		$status = array();
+
+		if ( isset($this->active['dpms']) )
+			$status['DPMS'] = $this->DPMS_status();
+
+		if ( isset($this->active['alsa']) )
+			$status['ALSA'] = $this->ALSA_status();
+
+		if ( isset($this->active['gnome-screensaver']) )
+			$status['Screensaver'] = $this->gnome_screensaver_status();
+
+		if ( $status ) 
+			$this->intercom($status);
 		sleep(1);
 	}
 }
@@ -129,7 +177,6 @@ class linux extends component {
 $t = new linux();
 
 $hostname = exec('hostname');
-
 if ( !$hostname ) {
 	note(critical,'Failed to get hostname (exec hostname)');
 	die();
