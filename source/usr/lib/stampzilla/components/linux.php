@@ -82,7 +82,18 @@ class linux extends component {
 
 // X11 - DPMS
 	function DPMS_status() {
-		return exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"Monitor is\" | awk '{print $3}'");
+		$status = exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"DPMS is\"");
+		$status = explode(" ",trim($status));
+		$dpms = array_pop($status);
+
+		$status = exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"Monitor is\"");
+		$status = explode(" ",trim($status));
+		$monitor = array_pop($status);
+	
+		if ( $dpms == 'Disabled' )
+			return 'On';
+		else
+			return $monitor;
 	}
 
 // X11 - Gnome-screensaver
