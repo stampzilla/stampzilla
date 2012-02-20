@@ -72,6 +72,12 @@ class sender extends component{
         if ( !isset($msg['from']) )
             $msg['from'] = $this->peer;
 
+        // Fix for cli objects like {'Roof':32000,'RoofMode':4,'Projector':false}
+        foreach($msg as $key => $line) {
+            if ( ($obj = json_decode(str_replace("'",'"',$line))) !== null )
+                $msg[$key] = $obj;
+        }
+
         $this->msg = sha1(json_encode($msg));
         $this->broadcast($msg);
     }

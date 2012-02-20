@@ -20,7 +20,10 @@ class errorhandler {
 		//	return false;
 
         if ( $no == 2 && $text == 'socket_recv(): unable to read from socket [11]: Resource temporarily unavailable' )
-            return false;
+            return true;
+
+        if ( $no == 2 && $text == 'socket_read(): unable to read from socket [4]: Interrupted system call' )
+            return true;
 
         switch($no){
             case E_PARSE:
@@ -138,24 +141,20 @@ function printout( $text ) {
 
 function format($level,$text){
    switch($level) {
+        case emergency:
+            return "\033[31mEMERGENCY ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
         case critical:
             return "\033[31mCRITICAL ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case error:
             return "\033[31mERROR    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case warning:
             return "\033[1;33mWARNING  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case notice:
             return "\033[32mNOTICE   ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case debug:
             return "\033[34mDEBUG    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         default:
             return "\033[36mUNKNOWN  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
     }
 }
 

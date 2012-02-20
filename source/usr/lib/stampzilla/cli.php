@@ -4,6 +4,7 @@
 define("VERSION",'0.0.5');
 
 require "lib/functions.php";
+require "lib/errorhandler.php";
 
 $args = arguments($_SERVER['argv']);
 $pwd = getcwd();
@@ -364,7 +365,7 @@ function command($cmd,$pwd = '',$args=array()) {
 			DEFINE('INHIBIT_START',1);
 
 			if ( !is_file($arg[1]) )
-				return note(warning,'File "'.$arg[1].'" do not exist!');
+				return note(critical,'File "'.$arg[1].'" do not exist!');
 
 			ob_start();
 			include $arg[1];

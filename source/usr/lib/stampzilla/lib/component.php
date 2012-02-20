@@ -31,7 +31,7 @@ class component {
         $this->peer = '';
 
     }/*}}}*/
-    function start( $id=NULL, $child=null ) {/*{{{*/
+    function start( $id=NULL, $child=null, $child_setup=null ) {/*{{{*/
         if($id)
             $this->peer = $id;
 
@@ -121,6 +121,9 @@ class component {
             // Wait so parent have time to register SIGALRM handler
             sleep(1);
 
+            if ( $child_setup && is_callable(array($this,$child_setup)) )
+                $this->$child_setup();
+
             // Child
             note( debug, "Starting child loop" );
             $this->child_loop($child);
@@ -182,6 +185,20 @@ class component {
     }/*}}}*/
 
 // COMMANDS
+    function emergency($msg) {
+        // TODO: Do some broadcasting here
+        note(emergency,$msg);
+
+        if ( isset($this->child_pid) )
+            $this->kill_child();
+
+        if ( isset($this->parent_pid) )
+            $this->kill_parent();
+
+        $this->bye();
+
+        die($msg);
+    }
     function getVariables() {/*{{{*/
         $data = get_object_vars($this);
         unset($data['udp']);
@@ -281,7 +298,7 @@ class component {
         $ic = wordwrap($ic,8192,"\n",true);
         $parts = explode("\n",$ic);
 
-        foreach( $parts as $ic ) {
+        foreach( $parts as $key => $ic ) {
             if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
                 $code = socket_last_error();
                 if ( $code == 32 )
