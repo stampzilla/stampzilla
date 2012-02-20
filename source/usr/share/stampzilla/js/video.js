@@ -12,7 +12,6 @@ video = {
 			'</div>';
 		
 		
-		sendJSON("to="+name+"&cmd=state");
 		sendJSON("to="+name+"&cmd=media");
 	},
 	removePlayer:function(name) {
