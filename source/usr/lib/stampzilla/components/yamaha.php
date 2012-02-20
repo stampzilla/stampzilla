@@ -27,16 +27,115 @@ class yamaha extends component {
         'Zone2Source' => '',
     );
 
+	function power($pkt) {
+		if ( !isset($pkt['zone']) )
+			$pkt['zone'] = 'Main';
+
+		if ( is_numeric($pkt['zone']) )
+			$pkt['zone'] = 'Zone'.$pkt['zone'];
+
+		if ( !isset($pkt['power']) )
+			$pkt['power'] = !$this->state[$pkt['zone']]['power'];
+
+		switch($pkt['zone']) {
+			case 'Main':
+				if ( $pkt['power'] ) {
+					return $this->send( '07E7E' );
+				} else
+					return $this->send( '07E7F' );
+			case 'Zone2':
+				if ( $pkt['power'] ) {
+					return $this->send( '07EBA' );
+				} else
+					return $this->send( '07EBB' );
+		}
+	}
+
+	function source($pkt) {
+		if ( !isset($pkt['source']) )
+			return $this->nak($pkt,'source parameter is missing');
+
+		if ( !isset($pkt['zone']) )
+			$pkt['zone'] = 'Main';
+
+		if ( is_numeric($pkt['zone']) )
+			$pkt['zone'] = 'Zone'.$pkt['zone'];
+
+		switch($pkt['zone']) {
+			case 'Main':
+				if ( !$this->state['Main']['power'] )
+					$this->send( '07E7E' );
+
+				switch( strtoupper($pkt['source']) ) {
+					case 'PHONO':
+						return $this->send( '07A14' );
+					case 'CD':
+						return $this->send( '07A15' );
+					case 'TUNER':
+						return $this->send( '07A16' );
+					case 'CD-R':
+						return $this->send( '07A19' );
+					case 'MD/TAPE':
+						return $this->send( '07A18' );
+					case 'DVD':
+						return $this->send( '07AC1' );
+					case 'DTV':
+						return $this->send( '07A54' );
+					case 'CBL/SAT':
+						return $this->send( '07AC0' );
+					case 'VCR1':
+						return $this->send( '07A0F' );
+					case 'DVR/VCR2':
+						return $this->send( '07A13' );
+					case 'V-AUX':
+						return $this->send( '07A55' );
+					case 'XM':
+						return $this->send( '07AB4' );
+				}
+
+			case 'Zone2':
+				if ( !$this->state['Zone2']['power'] )
+                        $this->send( '07EBA' );
+
+				switch( strtoupper($pkt['source']) ) {
+					case 'PHONO':
+						return $this->send( '07AD0' );
+					case 'CD':
+						return $this->send( '07AD1' );
+					case 'TUNER':
+						return $this->send( '07AD2' );
+					case 'CD-R':
+						return $this->send( '07AD4' );
+					case 'MD/TAPE':
+						return $this->send( '07AD3' );
+					case 'DVD':
+						return $this->send( '07ACD' );
+					case 'DTV':
+						return $this->send( '07AD9' );
+					case 'CBL/SAT':
+						return $this->send( '07ACC' );
+					case 'VCR1':
+						return $this->send( '07AD6' );
+					case 'DVR/VCR2':
+						return $this->send( '07AD7' );
+					case 'V-AUX':
+						return $this->send( '07AD8' );
+					case 'XM':
+						return $this->send( '07AB8' );
+				}
+		}
+	}
+
     function send( $cmd ) {
         $this->s->sendMessage("\x03\x03\x02$cmd\x03");
         $this->s->sendMessage("\x03\x03\x02$cmd\x03");
-        logger::text($cmd);
+        note(debug,'Sending'.$cmd);
         return true;
     }
 
     function startCommunication() {
         $this->s->sendMessage( "\x03\x03\x17000\x18" );
-        logger::text('Sending start string');
+        note(debug,'Sending start string');
     }
 
     /*function event( $pkt ) {
@@ -186,14 +285,20 @@ class yamaha extends component {
 
         $cmd = ltrim($cmd,chr(2));
 
+		note(debug,'Recived: '.$cmd);
+
         if ( substr($cmd,0,6) == 'R0193H' ) {
             $cmd = substr($cmd,8);
 
-            if ( substr($cmd,8,1) == 0 )
-                $this->setState('Main.source','None');
-            else
-                $this->setState('Main.source',$sources[substr($cmd,9,1)]);
+			$this->setState('Main.power',in_array(substr($cmd,8,1),array('01','02','04','05'))?1:0);
+			$this->setState('Zone2.power',in_array(substr($cmd,8,1),array('01','03','04','06'))?1:0);
+			note(notice,'Main power changed to '.$this->state['Main']['power']);
+			note(notice,'Zone2 power changed to '.$this->state['Zone2']['power']);
 
+			$this->setState('Main.source',$sources[substr($cmd,9,1)]);
+			$this->setState('Zone2.source',$sources[substr($cmd,13,1)]);
+			note(notice,'Main source changed to '.$this->state['Main']['source']);
+			note(notice,'Zone2 source changed to '.$this->state['Zone2']['source']);
             return;
         }
 
@@ -206,14 +311,18 @@ class yamaha extends component {
             case 20: // Power
                 $this->setState('Main.power',in_array($val,array('01','02','04','05'))?1:0);
                 $this->setState('Zone2.power',in_array($val,array('01','03','04','06'))?1:0);
+				note(notice,'Main power changed to '.$this->state['Main']['power']);
+				note(notice,'Zone2 power changed to '.$this->state['Zone2']['power']);
                 break;
             case 21: // Source
                 $val = substr($val,1);
                 $this->setState('Main.source',$sources[$val]);
+				note(notice,'Main source changed to '.$sources[$val]);
                 break;
             case 24: // Zone2 Source
                 $val = substr($val,1);
                 $this->setState('Zone2.source',$sources[$val]);
+				note(notice,'Zone2 source changed to '.$sources[$val]);
                 break;
             case 26: // Volume
                 $val = hexdec($val);
@@ -223,6 +332,7 @@ class yamaha extends component {
                     return $this->setState('Main.volume',16.5);
 
                 $this->setState('Main.volume',(-80-16.5)/(39-232)*$val-99.5 );
+				note(notice,'Main volue changed to '.$this->state['Main']['volume']);
                 break;
             case 27: // Zone2 Volume
                 $val = hexdec($val);
@@ -232,6 +342,7 @@ class yamaha extends component {
                     return $this->setState('Zone2.volume',16.5);
 
                 $this->setState('Zone2.volume',(-80-16.5)/(39-232)*$val-99.5 );
+				note(notice,'Zone2 volue changed to '.$this->state['Zone2']['volume']);
                 break;
         }
     }

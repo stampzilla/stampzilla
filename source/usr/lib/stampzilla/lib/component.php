@@ -31,9 +31,15 @@ class component {
         $this->peer = '';
 
     }/*}}}*/
-    function start( $id=NULL, $child=null ) {/*{{{*/
+    function start( $id=NULL, $child=null, $child_setup=null ) {/*{{{*/
         if($id)
             $this->peer = $id;
+
+		if ( DEFINED('INHIBIT_START') ) {
+			global $node;
+			$node = $this;
+			return;
+		}
 
         // Create a name if the node dosnt have one
         if ( !$this->peer ) {
@@ -115,6 +121,9 @@ class component {
             // Wait so parent have time to register SIGALRM handler
             sleep(1);
 
+            if ( $child_setup && is_callable(array($this,$child_setup)) )
+                $this->$child_setup();
+
             // Child
             note( debug, "Starting child loop" );
             $this->child_loop($child);
@@ -176,6 +185,20 @@ class component {
     }/*}}}*/
 
 // COMMANDS
+    function emergency($msg) {
+        // TODO: Do some broadcasting here
+        note(emergency,$msg);
+
+        if ( isset($this->child_pid) )
+            $this->kill_child();
+
+        if ( isset($this->parent_pid) )
+            $this->kill_parent();
+
+        $this->bye();
+
+        die($msg);
+    }
     function getVariables() {/*{{{*/
         $data = get_object_vars($this);
         unset($data['udp']);
@@ -275,7 +298,7 @@ class component {
         $ic = wordwrap($ic,8192,"\n",true);
         $parts = explode("\n",$ic);
 
-        foreach( $parts as $ic ) {
+        foreach( $parts as $key => $ic ) {
             if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
                 $code = socket_last_error();
                 if ( $code == 32 )
@@ -347,6 +370,8 @@ class component {
         if ( $this->hashed )
             return;
 
+		$prev = $this->state;
+
         switch( func_num_args() ) {
             case 1:
                 $list = func_get_args();
@@ -360,13 +385,15 @@ class component {
                 $this->setStatePath($key,$value);
                 break;
         }
-        $this->sendState();
+
+		if ( $prev != $this->state )
+	        $this->sendState();
     }/*}}}*/
     function sendState() {/*{{{*/
         if ( $this->hashed )
             return;
 
-        $this->state['node']['memory'] = memory_get_usage();
+        //$this->state['node']['memory'] = memory_get_usage();
 
         $this->broadcast( array(
             'type' => 'state',
@@ -397,30 +424,38 @@ class component {
         // Fail if the setting key is not defined
         if ( !isset($this->settings[$pkt['key']]) )
             return $this->nak($pkt,array('msg' => 'Unknown setting "'.$pkt['key'].'"','value'=>''));
-
+	
+		if ( $err = $this->set_setting($pkt['key'],$pkt['value']) === true ) {
+			note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
+	        $this->ack($pkt,array('value'=>$pkt['value']));
+		} else {
+            $this->nak($pkt,array('msg' => $err,'value'=>''));
+		}
+    }/*}}}*/
+	function set_setting($key,$value) {
         $file = '/etc/stampzilla/'.$this->peer.'.yml';
 
         // Check if file exists
         if ( !is_file($file) )
-            return $this->nak($pkt,array('msg' => "Config file ($file) is missing!",'value'=>''));
+			if ( !touch($file) )
+	            return "Failed to create config file ($file)!";
 
         // Try to read the settings file (yml)
         $data = spyc_load_file($file);
 
-        $data[$pkt['key']] = $pkt['value'];
+        $data[$key] = $value;
     
         $string = Spyc::YAMLDump($data);
 
         if ( !file_put_contents($file,$string) )
-            return $this->nak($pkt,array('msg' => "Failed to save config file ($file)!",'value'=>''));
+            return "Failed to save config file ($file)!";
     
         if ( is_callable(array($this,'setting_saved')) ) {
-            $this->setting_saved($pkt['key'],$pkt['value']);
+            return $this->setting_saved($key,$value);
         }
 
-        note(notice,"Saved setting '".$pkt['key']."' to '".$pkt['value']."'");
-        $this->ack($pkt,array('value'=>$pkt['value']));
-    }/*}}}*/
+		return true;
+	}
     function read_settings() {/*{{{*/
         // Check if there are any settings defined
         if ( !isset($this->settings) )
@@ -442,6 +477,9 @@ class component {
 
         return true;
     }/*}}}*/
+	function get_settings() {
+		return $this->settings;
+	}
     function setting($key) {/*{{{*/
         if ( !isset($this->settings[$key]['value']) )
             return;
