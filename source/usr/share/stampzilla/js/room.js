@@ -18,8 +18,10 @@ room = {
         temp["0"] = data.name;
         menu.layout.rooms[uuid] = temp;
 
-        el = new Element('div', {id: 'page_'+uuid,class: 'page room'});
-        $('main').adopt(el);
+        if($('page_'+uuid) == undefined){
+            el = new Element('div', {id: 'page_'+uuid,class: 'page room'});
+            $('main').adopt(el);
+        }
 
         room.rooms[uuid] = data;
         room.render(uuid);
