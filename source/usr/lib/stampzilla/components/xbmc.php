@@ -30,6 +30,7 @@ class xbmc extends component {
     }
 
     function setting_saved($key, $value) {
+		return true;
     }
 
     function connect($host,$port) {
@@ -265,7 +266,13 @@ class xbmc extends component {
 
 }
 
+$hostname = exec('hostname');
+if ( !$hostname ) {
+	note(critical,'Failed to get hostname (exec hostname)');
+	die();
+}
+
 $xbmc = new xbmc();
-$xbmc->start('xbmc','readSocket');
+$xbmc->start($hostname.'_xbmc','readSocket');
 
 ?>

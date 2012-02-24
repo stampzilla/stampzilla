@@ -53,11 +53,6 @@ incoming = function( pkt ) {
                                             menu.showPage(location.hash.substring(1,location.hash.length));
                                         }
                                     }
-                                case "xbmc":
-                                    if ( pkt.ret.paused != undefined ) {
-                                        video.setState(pkt.from,pkt.ret);
-                                    }
-                                    break;
                             }
                             break;
                         case 'media':
@@ -131,11 +126,14 @@ incoming = function( pkt ) {
                         }
                         $$('.INVALIDD').dispose();
                     }
+
+					if ( pkt.from == 'xbmc' ) {
+                        video.setState(pkt.from,pkt.data);
+					}
                     break;
                 case 'event':
                     switch(pkt.event) {
                         case 'state':
-                            video.setState(pkt.from,pkt.data);
                             break;
                         case 'addRoom':
                             editmode.exit();
