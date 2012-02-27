@@ -1,10 +1,11 @@
 <?php
 
-DEFINE('critical',0);
-DEFINE('error',1);
-DEFINE('warning',2);
-DEFINE('notice',3);
-DEFINE('debug',4);
-DEFINE('unknown',5);
+DEFINE('emergency',0);
+DEFINE('critical',1);
+DEFINE('error',2);
+DEFINE('warning',3);
+DEFINE('notice',4);
+DEFINE('debug',5);
+DEFINE('unknown',6);
 
 ?>

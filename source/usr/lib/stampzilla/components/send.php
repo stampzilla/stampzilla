@@ -1,6 +1,8 @@
+#!/usr/bin/php
 <?php
 
 $start = microtime(true);
+
 require_once '../lib/component.php';
 require_once "../lib/functions.php";
 
@@ -57,7 +59,7 @@ class sender extends component{
         }
     }
 
-    function send() {
+    function startup() {
 		if ( !$_GET ) {
         	note(error,'No send argument defined!');
 			die();
@@ -69,6 +71,12 @@ class sender extends component{
     function msg( $msg ) {
         if ( !isset($msg['from']) )
             $msg['from'] = $this->peer;
+
+        // Fix for cli objects like {'Roof':32000,'RoofMode':4,'Projector':false}
+        foreach($msg as $key => $line) {
+            if ( ($obj = json_decode(str_replace("'",'"',$line))) !== null )
+                $msg[$key] = $obj;
+        }
 
         $this->msg = sha1(json_encode($msg));
         $this->broadcast($msg);
@@ -108,8 +116,6 @@ class sender extends component{
 }
 
 $c = new sender();
-$c->peer = md5(mt_rand(0, 32) . time());
-$c->send();
 
 $c->start('','checkTimeout');
 ?>

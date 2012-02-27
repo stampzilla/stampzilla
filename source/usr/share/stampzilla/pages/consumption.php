@@ -1,1 +1,2 @@
-<iframe id="iframe" style="" href="incoming.php"></iframe>
+
+                <div id="log"></div>

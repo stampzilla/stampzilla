@@ -1,3 +1,4 @@
+#!/usr/bin/php
 <?php
 require_once "../lib/component.php";
 
@@ -9,40 +10,41 @@ class xbmc extends component {
         'play'=>'play'
     );
 
-	// INTERFACE
+    // INTERFACE
     protected $componentclasses = array('video.player','audio.player');
-	protected $settings = array(
-		'hostname'=>array(
-			'type'=>'text',
-			'name' => 'Hostname',
-			'required' => true
-		),
-		'port'=>array(
-			'type'=>'text',
-			'name' => 'Web port',
-			'required' => true
-		)
-	);
+    protected $settings = array(
+        'hostname'=>array(
+            'type'=>'text',
+            'name' => 'Hostname',
+            'required' => true
+        ),
+        'port'=>array(
+            'type'=>'text',
+            'name' => 'Web port',
+            'required' => true
+        )
+    );
 
-	function startup() {
-		$this->connect($this->setting('hostname'),9090);
-	}
-
-    function setting_saved($key, $value) {
+    function startup() {
+        $this->connect($this->setting('hostname'),9090);
     }
 
-	function connect($host,$port) {
+    function setting_saved($key, $value) {
+		return true;
+    }
+
+    function connect($host,$port) {
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
 
-		if ( !$host || !$port )
-			return;
+        if ( !$host || !$port )
+            return;
 
         socket_connect($this->socket,$host,$port);
 
         $this->json('JSONRPC.Version');
         $this->json('Player.GetActivePlayers');
 
-	}
+    }
     function getId(){
         $this->id++;
         if($this->id > 10000)
@@ -65,18 +67,18 @@ class xbmc extends component {
         return true;
     }
 
-	//recive a command and send it to xbmc
+    //recive a command and send it to xbmc
     function cmd($pkt){
         $this->json($pkt['run'],null,$pkt);
     }
 
-	function state($pkt){
-		if ( isset($this->state) )
-			return $this->state;
-	}
-	function media($pkt){
+    function state($pkt){
+        if ( isset($this->state) )
+            return $this->state;
+    }
+    function media($pkt){
         $this->json('VideoLibrary.GetMovies',array('fields'=>array('rating','length','tagline','lastplayed')),$pkt);
-	}
+    }
 
     //COMMANDS FOR CONTROLING PLAYER
 
@@ -89,7 +91,7 @@ class xbmc extends component {
     }
     function playMovie($pkt){
             $this->json('XBMC.Play',array('movieid'=>(int)$pkt['file']),$pkt);
-		return true;
+        return true;
     }
     function pause($pkt){
         if( $this->active_player && !$this->state->paused){
@@ -166,11 +168,11 @@ class xbmc extends component {
                     if($this->active_player){
                         $this->json($this->active_player.'Player.State');
                     } else {
-						$this->state = new stdClass();
-						$this->state->paused = false;
-						$this->state->playing = false;
+                        $this->state = new stdClass();
+                        $this->state->paused = false;
+                        $this->state->playing = false;
                         $this->broadcast_event('state',$this->state);
-					}
+                    }
                         
                     break;
                 case 'VideoLibrary.GetMovies':
@@ -249,7 +251,7 @@ class xbmc extends component {
 
     function readSocket(){
         if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,0) ) ){
-			sleep(1); // Sleep a litte, and wait for connection
+            sleep(1); // Sleep a litte, and wait for connection
         }
         $this->buff .= $buff;
 
@@ -264,7 +266,13 @@ class xbmc extends component {
 
 }
 
+$hostname = exec('hostname');
+if ( !$hostname ) {
+	note(critical,'Failed to get hostname (exec hostname)');
+	die();
+}
+
 $xbmc = new xbmc();
-$xbmc->start('xbmc','readSocket');
+$xbmc->start($hostname.'_xbmc','readSocket');
 
 ?>

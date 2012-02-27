@@ -20,7 +20,10 @@ class errorhandler {
 		//	return false;
 
         if ( $no == 2 && $text == 'socket_recv(): unable to read from socket [11]: Resource temporarily unavailable' )
-            return false;
+            return true;
+
+        if ( $no == 2 && $text == 'socket_read(): unable to read from socket [4]: Interrupted system call' )
+            return true;
 
         switch($no){
             case E_PARSE:
@@ -60,10 +63,14 @@ class errorhandler {
             die("Failed to create error send socket");
 
         socket_set_option( $s, SOL_SOCKET, SO_BROADCAST, 1 );
+		global $stampzilla;
+		if ( !$stampzilla )
+			$stampzilla = '???';
+
 		$string = json_encode(
 			array(
 				'type' => 'log',
-				'from' => '???',
+				'from' => $stampzilla,
 				'level' => $level,
 				'message' => $msg,
                 'data' => $data
@@ -95,9 +102,9 @@ class errorhandler {
 			$timestamp = floor($utimestamp);
 			$milliseconds = round(($utimestamp - $timestamp) * 1000000);
 
-			return str_pad($timestamp,3,' ',STR_PAD_LEFT)."s ".str_pad($milliseconds,6,' ',STR_PAD_LEFT)."us";
+			return str_pad($timestamp,3,' ',STR_PAD_LEFT)."s ".str_pad(round($milliseconds/1000,0),3,' ',STR_PAD_LEFT)."ms";
 
-	        return date('H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
+	        //return date('H:i:s.'.str_pad($milliseconds,6,'0',STR_PAD_LEFT),$timestamp);
 		}
     }
 }
@@ -113,15 +120,20 @@ function note($level,$text) {
     global $args;
     if ( in_array('d',$args['flags']) || $level < warning )
         printout(format($level,$text));
+
+	return false;
 }
 
 function printout( $text ) {
-	global $lastprint,$headprint;
+	global $lastprint,$headprint,$args;
 
 	if ( time() - $lastprint > 2 ) {
-		echo "\n----[ ".errorhandler::currentTime(true)." ]--------------------------\n";
+		if ( !in_array('g',$args['flags']) ) {
+			echo "\n----[ ".errorhandler::currentTime(true)." ]--------------------------\n";
+		}
+
 		$headprint = microtime(true);
-	}
+	} 
 	$lastprint = time();
 
 	echo $text;
@@ -129,24 +141,20 @@ function printout( $text ) {
 
 function format($level,$text){
    switch($level) {
+        case emergency:
+            return "\033[31mEMERGENCY ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
         case critical:
             return "\033[31mCRITICAL ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case error:
             return "\033[31mERROR    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case warning:
             return "\033[1;33mWARNING  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case notice:
             return "\033[32mNOTICE   ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         case debug:
             return "\033[34mDEBUG    ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
         default:
             return "\033[36mUNKNOWN  ".errorhandler::currentTime()." EE ".$text."\n\033[0m";
-            break;
     }
 }
 

@@ -76,6 +76,7 @@ $layout = array(
         <meta name="apple-mobile-web-app-status-bar-style" content="black" /> 
 
         <script type="text/javascript" src="js/all.php"></script>
+        <script type="text/javascript" src="js/iScroll.js"></script>
 
         <link href="css/base.css" rel="stylesheet" />
         <link href="css/editmode.css" rel="stylesheet" />
@@ -140,13 +141,20 @@ $layout = array(
 				setTimeout(function() { window.scrollTo(0, 1); }, 1000);
 				updateClock();
 				makeFastOnClick();
-				$('iframe').src="incoming.php";
+				//$('iframe').src="incoming.php";
+
+				test = new sape({});
+				test.connect('http://'+window.location.hostname+':12345/');
 
 				if ( location.hash > '' ) {
 					menu.showPage(location.hash.substring(1,location.hash.length));
 				}
 
+                window.addEvent('pageshow',function(){
+				    test.connect('http://'+window.location.hostname+':12345/');
+                });
                 window.addEvent('mouseup',function(){
+
                   clearTimeout(pressTimer);
                   // Clear timeout
                 });
@@ -167,6 +175,11 @@ $layout = array(
 
 				addEventListener("orientationchange", room.orient);
 
+                /*
+                var scroller = new iScroll($('scroller'),{
+                    momentum: false
+                });
+                */
 			}
             
         </script>
@@ -202,24 +215,26 @@ $layout = array(
                 <div id="larm"></div>
 				<div class="editmode" id="editmodehead">Edit mode active</div>
             </div>
+            <div id="scroller">
             <div class="main" id="main">
-			<?php
+            <?php
 
-				foreach($layout as $key => $line) {
-					echo '<div class="page" id="page_'.$key.'">';
-					include('pages/'.$key.'.php');
-					echo '</div>';
+                foreach($layout as $key => $line) {
+                    echo '<div class="page" id="page_'.$key.'">';
+                    include('pages/'.$key.'.php');
+                    echo '</div>';
 
-					foreach($line as $key2 => $sub) {
-						if ( is_numeric($key2) )
-							continue;
-						echo '<div class="page" id="page_'.$key2.'">';
-						include('pages/'.$key.'/'.$key2.'.php');
-						echo '</div>';
-					}
-				}
+                    foreach($line as $key2 => $sub) {
+                        if ( is_numeric($key2) )
+                            continue;
+                        echo '<div class="page" id="page_'.$key2.'">';
+                        include('pages/'.$key.'/'.$key2.'.php');
+                        echo '</div>';
+                    }
+                }
 
-			?>
+            ?>
+            </div>
             </div>
 			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
 				<div class="parameters"></div>

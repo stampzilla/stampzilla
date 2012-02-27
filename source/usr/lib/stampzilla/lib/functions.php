@@ -5,15 +5,15 @@ function getPwdX( $pid ) {
     exec("pwdx $pid",$ret);
     $dir = explode(': ',$ret[0],2);
 
-    if ( !count($dir) == 2 )
-        return false;
-    return $dir[1];
+    if ( isset($dir[1]) )
+        return $dir[1];
+    return false;
 }
 
 // List all active php processes and return those who belongs to stampzilla
 function listActive() {/*{{{*/
     // USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
-    exec("ps auxf|grep php",$out);
+    exec("ps auxf",$out);
 
     $active = array();
     foreach ( $out as $line ) {
@@ -22,10 +22,11 @@ function listActive() {/*{{{*/
             $pid = trim(substr($line,9,7));
 
             // Ignore self
-            if ( $pid == getmypid() )
+            if ( $pid == getmypid() || !is_numeric($pid) )
                 continue;
 
 	    	$pwd = getPwdX($pid);
+            $pwd = str_replace(' (deleted)','',$pwd);
 
             // Ignore scripts that dont belong to stampzilla (different pwd)
             if ( $pwd != getcwd() )
