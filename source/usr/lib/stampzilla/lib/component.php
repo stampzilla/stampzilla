@@ -214,7 +214,8 @@ class component {
 			'from' => $this->peer,
 			'cmd' => 'greetings',
 			'class' => $this->componentclasses,
-			'settings' => $this->settings
+			'settings' => $this->settings,
+            'state' => $this->state
 		));
     }
 
