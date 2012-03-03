@@ -116,7 +116,7 @@ class xbmc3 extends component {
                 case 'JSONRPC.Version':
                     $this->api_version = $event->result->version;
 
-                    if ( $this->api_version != 3 ){
+                    if ( $this->api_version != 3 && $this->api_version != 4 ){
                         trigger_error("Unsupported JSON.RPC API version ({$this->api_version})",E_USER_ERROR);
                         die();
                     }

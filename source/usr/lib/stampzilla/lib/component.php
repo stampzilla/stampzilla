@@ -230,9 +230,6 @@ class component {
         // TODO: Do some broadcasting here
         note(emergency,$msg);
 
-        if ( isset($this->child_pid) )
-            $this->kill_child();
-
         if ( isset($this->parent_pid) )
             $this->kill_parent();
 
