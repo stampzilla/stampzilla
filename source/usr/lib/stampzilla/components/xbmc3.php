@@ -111,7 +111,7 @@ class xbmc3 extends component {
             return trigger_error($event->error->message." (".$event->error->data->stack->message.")",E_USER_WARNING);
         };/*}}}*/
 
-        $this->setState('power',true);
+        $this->setState(array('booting'=>false,'power'=>true));
 
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
@@ -187,6 +187,8 @@ class xbmc3 extends component {
 							$this->players[$id] = array();
 
 						$this->players[$id]['playing'] = true;
+                        if( isset($this->players[$id]['media']) && $event->params->data->item->id != $this->players[$id]['media']->id)
+    					    $this->json('Player.GetItem',array($id));
 
 						$this->setPlayerStates();
 
@@ -234,11 +236,15 @@ class xbmc3 extends component {
         $this->json('System.Shutdown',null,$pkt);
     }
     function boot($pkt){
-        if($this->mac ){
+        if($this->mac && isset($this->state['power']) && $this->state['power'] === false){
             exec('etherwake -i vlan10 '.$this->mac);
             $this->setState('booting',true);
         }
+        return true;
     }
+
+
+    //below commands doesnt work yet. Copied from xbmc.php
     function play($pkt){
         if( $this->active_player && $this->state->paused){
             $this->json('VideoPlayer.PlayPause',null,$pkt);
