@@ -38,16 +38,39 @@ class xbmc3 extends component {
         $this->mac = $this->setting('macaddress');
     }/*}}}*/
 
-    function connect($host,$port) {/*{{{*/
+    function connect($host = null,$port = null) {/*{{{*/
+
+        if ( $host )
+            $this->host = $host;
+        else
+            $host = $this->host;
+
+        if ( $port )
+            $this->port = $port;
+        else
+            $port = $this->port;
+
+        if ( isset($this->socket) ) {
+            $doRestart = true;
+            socket_close($this->socket);
+        }
+
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
 
         if ( !$host || !$port )
             return;
 
-        socket_connect($this->socket,$host,$port);
+        if ( !socket_connect($this->socket,$host,$port) ) 
+            return;
 
-        $this->json('JSONRPC.Version');
-        $this->json('Player.GetActivePlayers');
+        if ( isset($doRestart) && isset($this->parent_pid) ) {
+            note(notice,'Starting new xbmc3 daemon');
+            $this->intercom('connected');
+        } else {
+            $this->json('JSONRPC.Version');
+            $this->json('Player.GetActivePlayers');
+        }
 		//$this->json('VideoLibrary.GetTVShows');
     }/*}}}*/
 
@@ -56,6 +79,22 @@ class xbmc3 extends component {
 	}
 
     function intercom_event($event){
+
+        if ( $event == 'not connected' ) {
+            unset($this->state['video']);
+            unset($this->state['picture']);
+            unset($this->state['music']);
+            $this->setState('power',false);
+            return;
+        }
+
+        if ( $event == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
+
 
         // Decode the incomming message/*{{{*/
         //note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
@@ -71,6 +110,8 @@ class xbmc3 extends component {
 
             return trigger_error($event->error->message." (".$event->error->data->stack->message.")",E_USER_WARNING);
         };/*}}}*/
+
+        $this->setState('power',true);
 
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
@@ -255,7 +296,9 @@ class xbmc3 extends component {
 
     function readSocket(){/*{{{*/
         if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,0) ) ){
-            sleep(1); // Sleep a litte, and wait for connection
+            $this->intercom('not connected');
+            sleep(10); // Sleep a litte, and wait for connection
+            $this->connect();
         }
         $this->buff .= $buff;
 
