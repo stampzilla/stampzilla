@@ -7,6 +7,7 @@ class xbmc3 extends component {
     private $active_player ='';
     private $lastcmd = array();
 	private $players = array();
+    private $mac = null;
 
     private $commands = array(/*{{{*/
         'play'=>'play'
@@ -24,11 +25,17 @@ class xbmc3 extends component {
             'type'=>'text',
             'name' => 'Web port',
             'required' => true
+        ),
+        'macaddress'=>array(
+            'type'=>'text',
+            'name' => 'MAC Address',
+            'required' => true
         )
     );/*}}}*/
 
     function startup() {/*{{{*/
         $this->connect($this->setting('hostname'),9090);
+        $this->mac = $this->setting('macaddress');
     }/*}}}*/
 
     function connect($host,$port) {/*{{{*/
@@ -51,7 +58,8 @@ class xbmc3 extends component {
     function intercom_event($event){
 
         // Decode the incomming message/*{{{*/
-        note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
+        //note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
+        note(debug,"From XBMC: \n".$event);
         if ( !$event = json_decode($event) ) {
             note(error,"Syntaxerror from XBMC");
             return;
@@ -180,6 +188,39 @@ class xbmc3 extends component {
 			}
 		}
 	}
+    //commands
+    function shutdown($pkt){
+        $this->json('System.Shutdown',null,$pkt);
+    }
+    function boot($pkt){
+        if($this->mac ){
+            exec('etherwake -i vlan10 '.$this->mac);
+            $this->setState('booting',true);
+        }
+    }
+    function play($pkt){
+        if( $this->active_player && $this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    function pause($pkt){
+        if( $this->active_player && !$this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    function stop($pkt){
+
+        if($this->active_player){
+            $this->json($this->active_player.'Player.Stop',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+
+    }
 
 
     function getId(){/*{{{*/
