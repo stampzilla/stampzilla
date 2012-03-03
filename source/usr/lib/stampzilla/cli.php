@@ -97,6 +97,7 @@ function command($cmd,$pwd = '',$args=array()) {
             unset($p[0]);
 
 
+            $killed = array();
             if ( ($active = listActive()) ) {
                 require_once('../lib/udp.php');
                 $udp = new udp('0.0.0.0','255.255.255.255',8282);
@@ -107,6 +108,7 @@ function command($cmd,$pwd = '',$args=array()) {
                         continue;
                     $node = str_replace('.php','',$node[1]);
                     if ( !isset($p[1]) || str_replace('.php','',$p[1]) == $node ) {
+                        $killed[$line['pid']] = 0;
                         echo "Sending kill signal to {$node}\n";
                         $udp->broadcast(array(
                             'to'=>$node,
@@ -118,8 +120,21 @@ function command($cmd,$pwd = '',$args=array()) {
             }
 
             $stop = time()+2;
-            while ( $active = listActive() && time()<$stop ) {
-                usleep(1000000);
+            $cnt=0;
+            while ( ($active = listActive()) && time()<$stop && $killed ) {
+
+                $cnt++;
+                foreach($active AS $process){
+                    if(isset($killed[$process['pid']]))
+                        $killed[$process['pid']] = $cnt;
+
+                }
+                foreach($killed as $key =>$line){
+                    if($line != $cnt)
+                        unset($killed[$key]);
+                }
+                usleep(100000);
+                echo "Waiting for ".implode(array_keys($killed),', ')."\r";
             }
 
             if ( ($active = listActive()) ) {
