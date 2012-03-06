@@ -126,6 +126,29 @@ class yamaha extends component {
 		}
 	}
 
+	function volume($pkt) {
+		if ( !isset($pkt['volume']) )
+			return $this->nak($pkt,'volume parameter is missing');
+
+		if ( !isset($pkt['zone']) )
+			$pkt['zone'] = 'Main';
+
+		if ( is_numeric($pkt['zone']) )
+			$pkt['zone'] = 'Zone'.$pkt['zone'];
+
+		switch($pkt['zone']) {
+			case 'Main':
+                $this->send('230'.dechex((1-($pkt['volume']/(-80-16.5)))*(0xE8-27)));
+                return true;
+            case 'Zone2':
+                $this->send('231'.dechex((1-($pkt['volume']/(-80-16.5)))*(0xE8-27)));
+                return true;
+            case 'Zone3':
+                $this->send('234'.dechex((1-($pkt['volume']/(-80-16.5)))*(0xE8-27)));
+                return true;
+        }
+    }
+
     function send( $cmd ) {
         $this->s->sendMessage("\x03\x03\x02$cmd\x03");
         $this->s->sendMessage("\x03\x03\x02$cmd\x03");
