@@ -1,7 +1,7 @@
 <?php
 
 // Get the current working dir of a process
-function getPwdX( $pid ) {
+function getPwdXold( $pid ) {
     exec("pwdx $pid",$ret);
     $dir = explode(': ',$ret[0],2);
 
@@ -10,6 +10,18 @@ function getPwdX( $pid ) {
     return false;
 }
 
+function getPwdX( $pid ) {
+    if(!is_file("/proc/$pid/environ"))
+        return false;
+    $data = @file_get_contents("/proc/$pid/environ");
+
+        $data = explode(chr(0),$data);
+        foreach($data as $key => $line) {
+            if ( substr($line,0,3) == "PWD" ) {
+                return substr($line,4);
+            }
+        }
+}
 // List all active php processes and return those who belongs to stampzilla
 function listActive() {/*{{{*/
     // USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
@@ -25,7 +37,8 @@ function listActive() {/*{{{*/
             if ( $pid == getmypid() || !is_numeric($pid) )
                 continue;
 
-	    	$pwd = getPwdX($pid);
+            $pwd = getPwdX($pid);
+            $pwd = str_replace(' (deleted)','',$pwd);
 
             // Ignore scripts that dont belong to stampzilla (different pwd)
             if ( $pwd != getcwd() )
@@ -90,49 +103,49 @@ function arguments($args ) {
 }
 
 function md5sums( $path, $hash=true ,$data = array(), $root = '' ) {
-	if ( !$root )
-		$root = $path;
+    if ( !$root )
+        $root = $path;
 
-	if( is_dir($path) ) {
-		$content = scandir($path);
-		foreach($content as $key => $line) {
-			if ( substr($line,0,1) == '.' )
-				continue;
+    if( is_dir($path) ) {
+        $content = scandir($path);
+        foreach($content as $key => $line) {
+            if ( substr($line,0,1) == '.' )
+                continue;
 
-			$data = md5sums($path."/$line",$hash,$data,$root);
-		}
-	} else {
-		if ( $hash ) 
-			$data[] = array(
-				md5(file_get_contents($path)),
-				substr($path,strlen($root)+1),
-			);
-		else 
-			$data[] = '/etc/'.substr($path,strlen($root)+1);
-	}
+            $data = md5sums($path."/$line",$hash,$data,$root);
+        }
+    } else {
+        if ( $hash ) 
+            $data[] = array(
+                md5(file_get_contents($path)),
+                substr($path,strlen($root)+1),
+            );
+        else 
+            $data[] = '/etc/'.substr($path,strlen($root)+1);
+    }
 
-	return $data;
+    return $data;
 }
 
 // Remove a directory recursive
 function rrmdir($dir) {
-	if (is_dir($dir)) {
-     	$objects = scandir($dir);
-     	foreach ($objects as $object) {
-       		if ($object != "." && $object != "..") {
-         		if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
-       		}
-     	}
-     	reset($objects);
-    	rmdir($dir);
-   	}
+    if (is_dir($dir)) {
+         $objects = scandir($dir);
+         foreach ($objects as $object) {
+               if ($object != "." && $object != "..") {
+                 if (filetype($dir."/".$object) == "dir") rrmdir($dir."/".$object); else unlink($dir."/".$object);
+               }
+         }
+         reset($objects);
+        rmdir($dir);
+       }
 } 
 
 // Copy recursive to a dir and create target dir if it dont exists
 function cpr( $from, $to ) {
 
-	$from = rtrim($from,'/');
-	$to = rtrim($to,'/');
+    $from = rtrim($from,'/');
+    $to = rtrim($to,'/');
 
     echo "$from\n";
 
@@ -142,32 +155,32 @@ function cpr( $from, $to ) {
     if ( is_link($to) )
         $to = readlink($to);*/
 
-	if ( is_dir($from) ) {
-		$content = scandir($from);
-		foreach($content as $key => $line) {
-			if ( substr($line,0,1) == '.' )
-				continue;
+    if ( is_dir($from) ) {
+        $content = scandir($from);
+        foreach($content as $key => $line) {
+            if ( substr($line,0,1) == '.' )
+                continue;
 
-			cpr($from."/$line",$to);
-		}
-	} elseif( is_file($from) ) {
-		// Check dirs, and create them
-		$target = $to;
-		$dirs = explode("/",dirname(ltrim($from,'/')));
-		foreach($dirs as $key => $line) {
-			$target .= "/$line";
-			if ( !is_dir($target) )
-				if ( !mkdir($target) )
-					return trigger_error("Failed creating dir ($target)",E_USER_ERROR);
+            cpr($from."/$line",$to);
+        }
+    } elseif( is_file($from) ) {
+        // Check dirs, and create them
+        $target = $to;
+        $dirs = explode("/",dirname(ltrim($from,'/')));
+        foreach($dirs as $key => $line) {
+            $target .= "/$line";
+            if ( !is_dir($target) )
+                if ( !mkdir($target) )
+                    return trigger_error("Failed creating dir ($target)",E_USER_ERROR);
 
-		}
-		if ( !copy($from,$target.'/'.basename($from)) )
-			return trigger_error("Failed to copy file ($from -> $target)",E_USER_ERROR);
-	} else {
+        }
+        if ( !copy($from,$target.'/'.basename($from)) )
+            return trigger_error("Failed to copy file ($from -> $target)",E_USER_ERROR);
+    } else {
         return trigger_error("Dir/file $from do not exist",E_USER_ERROR);
     }
 
-	return true;
+    return true;
 }
 
 function json_format($json)

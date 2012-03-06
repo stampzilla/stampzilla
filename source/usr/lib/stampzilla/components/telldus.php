@@ -70,6 +70,7 @@ class telldus extends component {
         print_r($res);
         if ( strpos($res[0],'Success') )
             return $res;
+
         return false;
     }
     function reset($pkg) {

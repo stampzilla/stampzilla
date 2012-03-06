@@ -76,6 +76,8 @@ class squeezebox extends component {
         return $this->send($this->nameToMac($pkt['id']).' playlist jump -1');
     }
     function play($pkt){
+        if(isset($pkt['url']))
+            return $this->send($this->nameToMac($pkt['id']).' playlist play '.urlencode($pkt['url']));
         return $this->send($this->nameToMac($pkt['id']).' play');
     }
     function playRandom($pkt){

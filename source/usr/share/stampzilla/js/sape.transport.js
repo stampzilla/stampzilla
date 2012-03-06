@@ -7,12 +7,20 @@ window.sape = {
 
         this.count = 0;
         //parent.window.sape.hello('!!!asd');
-        this.request('?start');
+        window.parent.onkeyup = function(ev) {
+                if (ev.keyCode == 27) {
+                    window.sape.recive(null);
+                }
+        };
 
+        this.request('?start');
 
         document.body.addEventListener('unload',function(){alert('abort')})
     },
     request: function( query ) {
+        if(this.requests.length > 0 ){
+            this.clearRequest(this.requests.shift());
+        }
         var request = document.createElement('script');
         request.src = this.url + query + "&" + (++this.count);
         document.head.appendChild(request);
@@ -36,11 +44,16 @@ window.sape = {
 
         clearTimeout(this.requestFailObserver);
         this.clearRequest(this.requests.shift());
-
         this.failCounter = 0;
 
         this.request('?');
-        parent.window.sape.recive(data);
+        if(data != null){
+            parent.window.sape.recive(data);
+        }
+    },
+    onInit:function(){
+        parent.window.sape.ready();
+        this.request('?');
     },
     clearRequest:function(request) {
 
