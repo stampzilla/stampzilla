@@ -135,7 +135,12 @@ class lg7000 extends component {
 
                     if ( !$this->state['power'] && $power ) {
                         $this->setState('power',$power);
-                        sleep(7);
+                        note(debug,"Feeling sleepy...zZzz");
+                        $done = time() + 7;
+                        while($done>time()) {
+                            sleep(1);
+                        }
+                        note(debug,"done sleeeping...zZzz");
                         $this->send('ke 0 ff'); // Check mute
                         $this->send('kf 0 ff'); // Check volume
                         $this->send('xb 0 ff'); // Check source

@@ -112,9 +112,9 @@ class logic extends component {
                             $state = false;
                         }
                         break;
-					default:	
-						$state = false;
-						break;
+                    default:    
+                        $state = false;
+                        break;
                 }
 
                 if ( !$state )
@@ -206,6 +206,41 @@ class logic extends component {
         $this->_save('rules');
         $this->setState('rules',$this->rules);
         return true;
+    }
+
+    function addCmd($pkt){
+        if ( !isset($pkt['cmdtype']) || !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']]) )
+            return false;
+
+        $pkt['data'] = explode(',',trim($pkt['data'],'{}'));
+        foreach($pkt['data'] as $key2 => $line2) {
+            unset($pkt['data'][$key2]);
+            $line2 = explode(':',$line2,2);
+            $pkt['data'][$line2[0]] = $line2[1];
+        }
+
+        //if cmduuid is set we update the command
+        if(isset($pkt['cmduuid']) && $pkt['cmduuid'] != '')
+            $this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] = $pkt['data'];
+        else
+            $this->rules[$pkt['uuid']][$pkt['cmdtype']][uniqid()] = $pkt['data'];
+
+        $this->_save('rules');
+        $this->setState('rules',$this->rules);
+        return true;
+    }
+
+    function removeCmd($pkt){
+        if ( !isset($pkt['cmdtype']) || !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']]) )
+            return $this->nak($pkt,'Command not found');
+
+        if(isset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] )){
+            unset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] );
+            $this->_save('rules');
+            $this->setState('rules',$this->rules);
+            return true;
+        }
+        return false;
     }
 
     function updateCondition($pkt) {
@@ -423,7 +458,7 @@ class logic extends component {
                     if( isset($line[$key2]) )
                         $this->schedule[$key][$key2] = $line2;
                 }
-
+                unset($this->schedule[$key]['timestamp']);
                 file_put_contents('/var/spool/stampzilla/reload_schedule',1);
                 return $this->_save('schedule');
             }
@@ -477,7 +512,7 @@ class logic extends component {
                 $this->setState('runner',$data);
                 break;
             case 'new_schedule':
-				$this->schedule = $data;
+                $this->schedule = $data;
                 $this->setState('schedule',$data);
                 break;
         }
@@ -499,10 +534,10 @@ class logic extends component {
                         $this->schedule[$this->event]['timestamp'] += $this->schedule[$this->event]['interval'];
                     }
                 } else {
-					// No repetition, then remove the event
+                    // No repetition, then remove the event
                     note(debug,'Removed event #'.$this->event);
                     unset($this->schedule[$this->event]);
-				}
+                }
                 $this->event = null;
             }
         }
@@ -513,8 +548,12 @@ class logic extends component {
             if ( !$this->_load('schedule') )
                 $this->schedule = array();
 
-            if ( is_file('/var/spool/stampzilla/reload_schedule') )
+            if ( is_file('/var/spool/stampzilla/reload_schedule') ){
                 unlink('/var/spool/stampzilla/reload_schedule');
+
+
+
+            }
 
             $this->event = null;
         }

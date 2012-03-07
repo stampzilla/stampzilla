@@ -96,6 +96,10 @@
 	border-right:1px solid #fff;
 	padding:20px;
 }
+#settings_pane .parameters textarea {
+	width:300px;
+    height:200px;
+}
 
 #settings_pane .parameters div {
 	clear:both;
