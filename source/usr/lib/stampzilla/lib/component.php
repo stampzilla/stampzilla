@@ -471,26 +471,32 @@ class component {
 		}
     }/*}}}*/
 	function set_setting($key,$value) {
-        $file = '/etc/stampzilla/'.$this->peer.'.yml';
 
-        // Check if file exists
-        if ( !is_file($file) )
+    if ( is_callable(array($this,'setting_validate')) ) {
+        if ( $ret = $this->setting_validate($key,$value) )
+          return $ret;
+    }
+
+    $file = '/etc/stampzilla/'.$this->peer.'.yml';
+
+    // Check if file exists
+    if ( !is_file($file) )
 			if ( !touch($file) )
-	            return "Failed to create config file ($file)!";
+	      return "Failed to create config file ($file)!";
 
-        // Try to read the settings file (yml)
-        $data = spyc_load_file($file);
+    // Try to read the settings file (yml)
+    $data = spyc_load_file($file);
 
-        $data[$key] = $value;
-    
-        $string = Spyc::YAMLDump($data);
+    $data[$key] = $value;
 
-        if ( !file_put_contents($file,$string) )
-            return "Failed to save config file ($file)!";
-    
-        if ( is_callable(array($this,'setting_saved')) ) {
-            return $this->setting_saved($key,$value);
-        }
+    $string = Spyc::YAMLDump($data);
+
+    if ( !file_put_contents($file,$string) )
+      return "Failed to save config file ($file)!";
+
+    if ( is_callable(array($this,'setting_saved')) ) {
+      return $this->setting_saved($key,$value);
+    }
 
 		return true;
 	}

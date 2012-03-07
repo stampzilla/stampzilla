@@ -406,22 +406,31 @@ function command($cmd,$pwd = '',$args=array()) {
 				if ( !isset($line['value']) )
 					$line['value'] = '';
 
-				echo $key." [".$line['value']."]: ";
+				echo $line['name']." [".$line['value']."]: ";
 
 				$ok = false;
 				while ( !$ok ) {
 					$val = trim(fgets($handle));
-					if ( $val ) {
+
+          if ( $val && is_callable(array($node,'setting_validate')) ) {
+              if ( $ret = $node->setting_validate($key,$val) ) {
+							  note(warning,"Failed to save: ".$ret);
+							  echo $line['name']." [".$line['value']."]: ";
+                continue;
+              }
+          } 
+          
+          if ( $val ) {
 						$ret = $node->set_setting($key,$val);
 						if ( $ret === true ) 
 							$ok = true;
 						else {
 							note(warning,"Failed to save: ".$ret);
-							echo $key." [".$line['value']."]: ";
+							echo $line['name']." [".$line['value']."]: ";
 						}
-					} elseif ( $line['required'] && !$line['value'] ) {
+					} elseif ( isset($line['required']) && $line['required'] && !$line['value'] ) {
 							note(warning,"Required parameter, try again!");
-							echo $key." [".$line['value']."]: ";
+							echo $line['name']." [".$line['value']."]: ";
 					} else {
 						$ok = true;
 					}

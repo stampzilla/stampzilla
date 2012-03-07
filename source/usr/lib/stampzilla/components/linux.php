@@ -89,9 +89,11 @@ class linux extends component {
 		$status = exec("export DISPLAY=:0; export XAUTHORITY=".$this->xauth()."; export PATH=\${PATH}:/usr/X11R6/bin; xset -q | grep \"Monitor is\"");
 		$status = explode(" ",trim($status));
 		$monitor = array_pop($status);
-	
+	    
+        $monitor = str_replace(array('On','Off'),array('1','0'),$monitor);
+
 		if ( $dpms == 'Disabled' )
-			return 'On';
+			return '1';
 		else
 			return $monitor;
 	}
