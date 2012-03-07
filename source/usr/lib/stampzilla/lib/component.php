@@ -481,22 +481,24 @@ class component {
 
     // Check if file exists
     if ( !is_file($file) )
-			if ( !touch($file) )
+        if ( !touch($file) )
 	      return "Failed to create config file ($file)!";
 
-    // Try to read the settings file (yml)
-    $data = spyc_load_file($file);
+        // Try to read the settings file (yml)
+        $data = spyc_load_file($file);
 
-    $data[$key] = $value;
+        $data[$key] = $value;
 
-    $string = Spyc::YAMLDump($data);
+        $string = Spyc::YAMLDump($data);
 
-    if ( !file_put_contents($file,$string) )
-      return "Failed to save config file ($file)!";
+        if ( !file_put_contents($file,$string) )
+          return "Failed to save config file ($file)!";
 
-    if ( is_callable(array($this,'setting_saved')) ) {
-      return $this->setting_saved($key,$value);
-    }
+        if ( is_callable(array($this,'setting_saved')) ) {
+          return $this->setting_saved($key,$value);
+        }
+
+        $this->settings[$key] = $value;
 
 		return true;
 	}
