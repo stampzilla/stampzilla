@@ -130,6 +130,11 @@ class stateLogger extends component {
     }
   }
 
+  function _child() {
+    sleep(10);
+    mysql_ping();
+  }
+
     function readStates( $path ) {/*{{{*/
         $path = explode('.',$path);
         $path = array_filter($path, 'strlen'); // Remove empty
@@ -201,6 +206,6 @@ class stateLogger extends component {
 
 
 $l = new stateLogger();
-$l->start('stateLogger');
+$l->start('stateLogger','_child');
 
 ?>
