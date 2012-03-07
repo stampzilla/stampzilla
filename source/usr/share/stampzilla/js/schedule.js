@@ -58,8 +58,6 @@ schedule = {
     unschedule: function(uuid){
         var jsonRequest = new Request.JSON({url: 'send.php?to=logic&uuid='+uuid+'&cmd=unschedule', onSuccess: function(data){}}).send();
     },
-    reschedule: function(uuid){
-    },
     showFormCmd: function(uuid){
         var tmp;
         var name = new Element('textarea', {'id':'value_cmd','value' : ''});

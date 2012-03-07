@@ -31,16 +31,7 @@ class onkyo extends component {
     function power($pkt){/*{{{*/
         if(!isset($pkt['power']))
             $pkt['power'] = (!$this->state['power'])+0;
-
         $this->send('!1PWR0'.$pkt['power'],$pkt);
-        /*if ( $pkt['power'] ) {
-            note(debug,"Feeling sleepy...zZzz");
-            $done = time() + 5;
-            while($done>time()) {
-                sleep(1);
-            }
-            note(debug,"don sleeeping...zZzz");
-        }*/
     }/*}}}*/
     function source($pkt){/*{{{*/
         $s = array (
@@ -182,6 +173,8 @@ class onkyo extends component {
 
                 array_shift($this->que);
             }
+            else
+                $next['sent'] = false;
             $this->que[key($this->que)]['retry'] = $this->que[key($this->que)]['retry']+1;
             $next = reset($this->que);
         }

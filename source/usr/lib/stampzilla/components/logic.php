@@ -208,8 +208,8 @@ class logic extends component {
         return true;
     }
 
-    function addEnter($pkt){
-        if ( !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']]) )
+    function addCmd($pkt){
+        if ( !isset($pkt['cmdtype']) || !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']]) )
             return false;
 
         $pkt['data'] = explode(',',trim($pkt['data'],'{}'));
@@ -219,22 +219,23 @@ class logic extends component {
             $pkt['data'][$line2[0]] = $line2[1];
         }
 
-        //if enteruuid is set we update the command
-        if(isset($pkt['enteruuid']) && $pkt['enteruuid'] != '')
-            $this->rules[$pkt['uuid']]['enter'][$pkt['enteruuid']] = $pkt['data'];
+        //if cmduuid is set we update the command
+        if(isset($pkt['cmduuid']) && $pkt['cmduuid'] != '')
+            $this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] = $pkt['data'];
         else
-            $this->rules[$pkt['uuid']]['enter'][uniqid()] = $pkt['data'];
+            $this->rules[$pkt['uuid']][$pkt['cmdtype']][uniqid()] = $pkt['data'];
 
         $this->_save('rules');
         $this->setState('rules',$this->rules);
         return true;
     }
-    //TODO: fixa klart removeenter js och php! 
-    function removeEnter($pkt){
-        if ( !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']]) || !isset($this->rules[$pkt['enteruuid']]) )
-            return false;
-        if(isset($this->rules[$pkt['uuid']]['enter'][$pkt['enteruuid']] )){
-            unset($this->rules[$pkt['uuid']]['enter'][$pkt['enteruuid']] );
+
+    function removeCmd($pkt){
+        if ( !isset($pkt['cmdtype']) || !isset($pkt['uuid']) || !isset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']]) )
+            return $this->nak($pkt,'Command not found');
+
+        if(isset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] )){
+            unset($this->rules[$pkt['uuid']][$pkt['cmdtype']][$pkt['cmduuid']] );
             $this->_save('rules');
             $this->setState('rules',$this->rules);
             return true;

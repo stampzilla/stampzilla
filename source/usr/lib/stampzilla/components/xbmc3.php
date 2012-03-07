@@ -212,6 +212,9 @@ class xbmc3 extends component {
 					case 'GUI.OnScreensaverDeactivated':
 						$this->setState('screensaver',false);
 						break;
+					case 'System.OnRestart':
+						$this->setState('booting',true);
+						break;
 				}
             }
         }
