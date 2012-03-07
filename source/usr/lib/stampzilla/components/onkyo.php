@@ -1,6 +1,10 @@
 #!/usr/bin/php
 <?php
 
+//stty -F /dev/ttyUSB1 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+//stty -F /dev/ttyUSB0 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+//stty -F /dev/ttyUSB2 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+
 require_once "../lib/component.php";
 
 class onkyo extends component {
@@ -16,6 +20,7 @@ class onkyo extends component {
         socket_connect($this->socket,'localhost',3001);
 
 
+        $this->state['power'] = false;
         $this->send('!1PWRQSTN');
         $this->send('!1MVLQSTN');
         $this->send('!1SLIQSTN');
@@ -28,7 +33,6 @@ class onkyo extends component {
             $pkt['power'] = (!$this->state['power'])+0;
 
         $this->send('!1PWR0'.$pkt['power'],$pkt);
-
         /*if ( $pkt['power'] ) {
             note(debug,"Feeling sleepy...zZzz");
             $done = time() + 5;
@@ -77,14 +81,7 @@ class onkyo extends component {
     }/*}}}*/
 
     function intercom_event($cmd){/*{{{*/
-
         note(notice,'Read: '.$cmd);
-
-        $pkt = array_shift($this->que);
-
-        if ( $pkt['pkt'] )
-            $this->ack($pkt['pkt']);
-
         $s = array (
             '00' => 'vcrdvr',
             '01' => 'cblsat',
@@ -100,9 +97,16 @@ class onkyo extends component {
             26 => 'tuner',
         );
 
+        $pkt = reset($this->que);
+        if ( ($pkt['pkt'] && trim($cmd) == trim($pkt['cmd'])) || strstr($pkt['cmd'],'QSTN') ){
+            $pkt = array_shift($this->que);
+            $this->ack($pkt['pkt']);
+        }
 
         $val = substr($cmd,5);
         $cmd = substr($cmd,0,5);
+
+
         switch ($cmd){
             case '!1SLI':
                 $this->setState('source',$s[$val]);
@@ -154,24 +158,31 @@ class onkyo extends component {
             'cmd' => $text."\r",
             'pkt' => $ack,
             'sent' => false,
-            'timestamp' => 0
+            'timestamp' => 0,
+            'retry' => 0
         );
 
         $this->runQue();
+
     }/*}}}*/
     function runQue() {/*{{{*/
         note(debug,"Kolla kö");
         $next = reset($this->que);
 
+
         if ( !$next )
             return;
 
         if ( $next['timestamp'] < time() && $next['sent']) {
-            note(warning,"Unanswerd message (".$next['cmd']."), throwing it away");
-            if( $next['pkt'] )
-                $this->nak($next['pkt']);
+            note(warning,"Unanswerd message (".$next['cmd']."), Trying again:".$next['retry']);
+            if($next['retry'] < 2){
+                note(warning,"Unanswerd message (".$next['cmd']."), throwing it away");
+                if( $next['pkt'] )
+                    $this->nak($next['pkt']);
 
-            array_shift($this->que);
+                array_shift($this->que);
+            }
+            $this->que[key($this->que)]['retry'] = $this->que[key($this->que)]['retry']+1;
             $next = reset($this->que);
         }
 

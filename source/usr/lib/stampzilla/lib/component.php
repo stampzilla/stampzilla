@@ -74,6 +74,8 @@ class component {
         if ( !$child ) {
             $this->child_pid = 1;
         } else {
+            $this->child_func = $child;
+
             // Create a intercom socket between parent and child process
             $sockets = array();
             if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
@@ -129,6 +131,45 @@ class component {
             $this->child_loop($child);
         }
     }/*}}}*/
+
+    function restart_child() {
+        $oldchild = $this->child_pid;
+
+        // Create a intercom socket between parent and child process
+        $sockets = array();
+        if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
+            return trigger_error("Failed to create socket pair: ".socket_strerror(socket_last_error()));
+        }
+
+        // Fork a child process
+        if ( ($this->child_pid = pcntl_fork()) == -1 )
+            return trigger_error('Failed to fork');
+
+        note(debug,'Forked process with pid:'.$this->child_pid);
+
+        if ( $this->child_pid ) {
+            $this->intercom_socket = $sockets[0]; 
+
+            $this->setState('node.child',$this->child_pid);
+
+            posix_kill( $oldchild, 9 );
+        } else {
+            $this->parent_pid = posix_getppid();
+
+            // Make shure we stop the parent if child dies
+            register_shutdown_function(array($this,'kill_parent') );
+
+            $this->intercom_socket = $sockets[1]; // Writer
+            socket_close($sockets[0]);
+
+            if ( $child_setup && is_callable(array($this,$child_setup)) )
+                $this->$child_setup();
+
+            // Child
+            note( debug, "Starting child loop" );
+            $this->child_loop($this->child_func);
+        }
+    }
 
 // MAIN LOOPS
     function parent_loop() {/*{{{*/
@@ -189,9 +230,6 @@ class component {
         // TODO: Do some broadcasting here
         note(emergency,$msg);
 
-        if ( isset($this->child_pid) )
-            $this->kill_child();
-
         if ( isset($this->parent_pid) )
             $this->kill_parent();
 
@@ -205,7 +243,7 @@ class component {
         unset($data['intercom_socket']);
         return $data;
     }/*}}}*/
-    function kill($pkt) {/*{{{*/
+    function kill($pkt=null) {/*{{{*/
         if ($pkt) 
             $this->ack($pkt);
         $this->kill_child();
