@@ -16,16 +16,33 @@ class onkyo extends component {
     protected $que = array();
 
     function startup() {/*{{{*/
-        $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'localhost',3001);
-
-
-        $this->state['power'] = false;
-        $this->send('!1PWRQSTN');
-        $this->send('!1MVLQSTN');
-        $this->send('!1SLIQSTN');
+        $this->connect();
 
     }/*}}}*/
+
+    function connect(){
+
+        if ( isset($this->socket) ) {
+            $doRestart = true;
+            socket_close($this->socket);
+        }
+
+        $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        if( !socket_connect($this->socket,'localhost',3001))
+            return;
+
+        if ( isset($doRestart) && isset($this->parent_pid) ) {
+            note(notice,'Starting new onkyo daemon');
+            $this->intercom('connected');
+        } else {
+            $this->state['power'] = false;
+            $this->send('!1PWRQSTN');
+            $this->send('!1MVLQSTN');
+            $this->send('!1SLIQSTN');
+        }
+
+    }
 
 //FUNCTIONS
     function power($pkt){/*{{{*/
@@ -72,6 +89,20 @@ class onkyo extends component {
     }/*}}}*/
 
     function intercom_event($cmd){/*{{{*/
+        if ( $cmd == 'not connected' ) {
+            $this->setState('power',false);
+            $this->setState('source',false);
+            $this->setState('volume',false);
+            return;
+        }
+
+        if ( $cmd == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
+
         note(notice,'Read: '.$cmd);
         $s = array (
             '00' => 'vcrdvr',
@@ -127,7 +158,9 @@ class onkyo extends component {
     function _child() {/*{{{*/
         $contents = '';
         if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
-            die();
+            $this->intercom('not connected');
+            sleep(10); // Sleep a litte, and wait for connection
+            $this->connect();
         }
         $this->buff .= $buff;
 
