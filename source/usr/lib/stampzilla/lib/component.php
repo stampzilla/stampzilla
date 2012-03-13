@@ -13,6 +13,7 @@ class component {
     private $died = false;
     private $hashed = false;
     public $state = array();
+    private $intercom_id = 0;
 
 // STARTUP
     function __construct() {/*{{{*/
@@ -333,10 +334,21 @@ class component {
         // Send the alarm signal to parent
         posix_kill( $this->parent_pid, SIGALRM );
 
-        $ic = wordwrap($ic,8192,"\n",true);
-        $parts = explode("\n",$ic);
+        $this->intercom_id++;
+
+        $ic2 = wordwrap($ic,4000,"\n",true);
+        $parts = explode("\n",$ic2);
+        note('debug','Sending intercom '.$this->intercom_id.' | '.strlen($ic).' byte in '.count($parts).' parts');
+
 
         foreach( $parts as $key => $ic ) {
+            $ic = base64_encode($ic);
+            $ic = json_encode( array(
+                'id' => $this->intercom_id,
+                'p' => count($parts),
+                'd' => $ic
+            ))."\n";
+
             if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
                 $code = socket_last_error();
                 if ( $code == 32 )
@@ -362,19 +374,39 @@ class component {
         }
 
         $buff = explode("\n",$buff);
+        $intercoms = array();
 
         foreach ( $buff as $buffen ){
             if ( !trim($buffen) )
                 continue;
 
-            if ( ($args = json_decode($buffen)) === NULL )
+            if ( ($args = json_decode($buffen,true)) === NULL )
                 return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
 
-            // Call the intercom_event
-            if ( is_callable(array($this,'intercom_event')) ) {
-                call_user_func_array( array($this,'intercom_event'),$args );
-            } else
-                trigger_error("Got intercom event but no intercom_event function exists!");
+            if ( !isset($intercoms[$args['id']]) )
+                $intercoms[$args['id']] = array(
+                    'cnt' => $args['p'],
+                    'parts' => array()
+                );
+
+            $intercoms[$args['id']]['parts'][] = base64_decode($args['d']);
+
+            if ( $intercoms[$args['id']]['cnt'] == count($intercoms[$args['id']]['parts']) ) {
+                $data = implode($intercoms[$args['id']]['parts']);
+
+                note(debug,'Recived intercom '.$args['id']);
+
+                if ( ($data2 = json_decode($data)) === NULL )
+                    return trigger_error("Syntax error in intercom JSON (".trim($data).")");
+
+                unset($intercoms[$args['id']]);
+
+                // Call the intercom_event
+                if ( is_callable(array($this,'intercom_event')) ) {
+                    call_user_func_array( array($this,'intercom_event'),$data2 );
+                } else
+                    trigger_error("Got intercom event but no intercom_event function exists!");
+            }
         }
     }/*}}}*/
 

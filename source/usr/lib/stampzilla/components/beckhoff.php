@@ -833,7 +833,7 @@ class beckhoff extends component {
 
                 if ( strlen($package) < ($len) ) {
                     $this->show($package,"SHORT");
-                    echo "To short $start - ".strlen($package)."<$len\n";
+                    //echo "To short $start - ".strlen($package)."<$len\n";
                     return;
                 }
 
