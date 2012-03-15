@@ -17,7 +17,7 @@ class stateLogger extends component {
             'required' => true
         ),
         'password'=>array(
-            'type'=>'text',
+            'type'=>'password',
             'name' => 'Database password',
             'required' => true
         ),
@@ -49,7 +49,7 @@ class stateLogger extends component {
       $this->vars[trim($line[0])][] = $line[0].'.'.$line[1];
     }
 
-    if ( !mysql_ping() ) {
+    if ( !@mysql_ping() ) {
       $host = $this->setting('server');
       $user = $this->setting('username');
       $pass = $this->setting('password');
@@ -71,7 +71,7 @@ class stateLogger extends component {
           `field` varchar(255) NOT NULL,
           `numeric` float NOT NULL,
           `string` varchar(100) NOT NULL,
-          `timestamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          `timestamp` DATETIME NOT NULL,
           PRIMARY KEY (`id`)
         )") )
           $this->emergency('Failed to create table stateLogger in mysql database');
@@ -92,7 +92,43 @@ class stateLogger extends component {
           }
         }
       }
+
+
+      if ( !$res = mysql_query('SHOW TABLES LIKE "fields"') )
+        $this->emergency('Failed to check if table fields exists in database');
+
+      if ( !mysql_fetch_assoc($res) ) {
+        note(notice,'Creating new database table named "fields"');
+        if ( !mysql_query("CREATE TABLE `stampzilla`.`fields` (
+          `field` INT( 11 ) NOT NULL AUTO_INCREMENT PRIMARY KEY ,
+          `name` VARCHAR( 255 ) NOT NULL
+        )") )
+          $this->emergency('Failed to create table stateLogger in mysql database');
+      }
+
+      if ( !$res = mysql_query('SHOW TABLES LIKE "data"') )
+        $this->emergency('Failed to check if table data exists in database');
+
+      if ( !mysql_fetch_assoc($res) ) {
+        note(notice,'Creating new database table named "data"');
+        if ( !mysql_query("CREATE TABLE IF NOT EXISTS `data` (
+              `id` int(11) NOT NULL AUTO_INCREMENT,
+              `field` int(11) NOT NULL,
+              `timestamp` DATETIME NOT NULL,
+              `sec` int(11) NOT NULL,
+              `min` int(11) NOT NULL,
+              `hour` int(11) NOT NULL,
+              `day` int(11) NOT NULL,
+              PRIMARY KEY (`id`)
+            )") )
+          $this->emergency('Failed to create table data in mysql database');
+      }
+
     }
+
+
+
+    $this->calculate();
   }
 
   function setting_saved($key,$value) {
@@ -132,7 +168,80 @@ class stateLogger extends component {
 
   function _child() {
     sleep(10);
+    $this->calculate();
     mysql_ping();
+  }
+
+  function calculate() {
+    $sec = array();
+    $min = array();
+    $hour = array();
+    $day = array();
+
+    /*$start = strtotime("-7days");
+    for($i=0;$i<2000;$i++) {
+      mysql_query("INSERT INTO stateLogger SET ".
+        "`timestamp`=FROM_UNIXTIME(".rand($start,time())."), ".
+        "`field`='telldus.temp', ".
+        "`numeric`=".rand(0,30)." "
+      );
+    }*/
+
+    //mysql_query("TRUNCATE TABLE data");
+
+    if ( !$res = mysql_query("SELECT *,UNIX_TIMESTAMP(timestamp) utimestamp FROM stateLogger WHERE NOT rm ORDER BY timestamp ASC") )
+        die("Ingen data");
+
+    note(notice,"Recalculating averages (".mysql_num_rows($res).") rows");
+
+    while( $row = mysql_fetch_assoc($res) ) {
+      if ( !isset($first) ) {
+        $first = $row['utimestamp'];
+        print_r($row);
+      }
+
+      $this->clean($sec,$row['utimestamp']-1);
+      $this->clean($min,$row['utimestamp']-60);
+      $this->clean($hour,$row['utimestamp']-3600);
+      $this->clean($day,$row['utimestamp']-86400);
+
+      $sec[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
+      $min[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
+      $hour[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
+      $day[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
+
+      $exist = mysql_query("SELECT id FROM data WHERE timestamp='".$row['timestamp']."'");
+      
+      if ( $row['utimestamp'] > $first + 86400 || !mysql_num_rows($exist) ) {
+        mysql_query("DELETE FROM data WHERE timestamp='".$row['timestamp']."'");
+        mysql_query("INSERT INTO data SET ".
+            "`timestamp`='".$row['timestamp']."', ".
+            "sec=".(array_sum($sec)/count($sec)).", ".
+            "min=".(array_sum($min)/count($min)).", ".
+            "hour=".(array_sum($hour)/count($hour)).", ".
+            "day=".(array_sum($day)/count($day))." "
+        );
+      }
+
+      $last = $row['utimestamp'];
+    }
+
+
+    mysql_query("UPDATE stateLogger SET rm=0");
+    mysql_query("UPDATE stateLogger SET rm=1 WHERE timestamp<'".date('Y-m-d H:i:s',$last-(86400*2))."'");
+
+    note(debug,"Done calculating");
+    die();
+  }
+
+  function clean(&$data, $limit) {
+    foreach($data as $key => $line) {
+      list($time,$id) = explode('.',$key);
+      if ($time<=$limit) {
+        unset($data[$key]);
+      } else
+        return $data;
+    }
   }
 
     function readStates( $path ) {/*{{{*/

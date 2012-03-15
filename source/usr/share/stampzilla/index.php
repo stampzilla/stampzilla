@@ -29,6 +29,9 @@ $layout = array(
 		'heat' => array(
 			0 => 'Heat'
 		),
+		'temp' => array(
+			0 => 'Temp'
+		),
 	),
 	'alarm' => array(
 		0 => 'Alarm',
@@ -77,6 +80,7 @@ $layout = array(
 
         <script type="text/javascript" src="js/all.php"></script>
         <script type="text/javascript" src="js/iScroll.js"></script>
+        <script type="text/javascript" src="js/graph/dygraph-combined.js"></script>
 
         <link href="css/base.css" rel="stylesheet" />
         <link href="css/editmode.css" rel="stylesheet" />
