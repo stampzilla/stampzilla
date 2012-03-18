@@ -85,21 +85,21 @@ schedule = {
         $('settings_pane').fade('in');
     },
     showFormSchedule: function(uuid){
-        var tmp;
+        var tmp,name,interval,time,button;
         if(uuid != null){
-            var name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : schedule.schedule[uuid].name});
-            var interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : schedule.schedule[uuid].interval});
-            var time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : schedule.schedule[uuid].time});
-            var button = new Element('input', {'type' : 'button', 'value' : 'Update'});
+            name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : schedule.schedule[uuid].name});
+            interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : schedule.schedule[uuid].interval});
+            time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : schedule.schedule[uuid].time});
+            button = new Element('input', {'type' : 'button', 'value' : 'Update'});
             $('settings_pane').getElement('.remove').style.display = "block";
             $('settings_pane').getElement('.remove').onclick = function() {if(!confirm('are u sure?')){ return false; }schedule.unschedule(uuid); $('settings_pane').fade('out'); return false;};
             el = new Element('h1', {html: 'Edit schedule:'});
         }
         else{
-            var name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : ''});
-            var interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : ''});
-            var time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : ''});
-            var button = new Element('input', {'type' : 'button', 'value' : 'Add'});
+            name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : ''});
+            interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : ''});
+            time = new Element('input', {'id':'value_time','type':'text','name' : 'time','value' : ''});
+            button = new Element('input', {'type' : 'button', 'value' : 'Add'});
             $('settings_pane').getElement('.remove').style.display = "none";
             el = new Element('h1', {html: 'New Schedule:'});
         }
@@ -133,4 +133,4 @@ schedule = {
     }
 
 
-}
+};
