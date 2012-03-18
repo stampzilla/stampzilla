@@ -171,7 +171,7 @@ class lg7000 extends component {
                     if ( !$this->state['power'] && $power ) {
                         $this->setState('power',$power);
                         note(debug,"Feeling sleepy...zZzz");
-                        $done = time() + 7;
+                        $done = time() + 8;
                         while($done>time()) {
                             sleep(1);
                         }

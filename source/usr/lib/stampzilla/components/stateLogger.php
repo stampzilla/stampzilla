@@ -231,7 +231,6 @@ class stateLogger extends component {
     mysql_query("UPDATE stateLogger SET rm=1 WHERE timestamp<'".date('Y-m-d H:i:s',$last-(86400*2))."'");
 
     note(debug,"Done calculating");
-    die();
   }
 
   function clean(&$data, $limit) {

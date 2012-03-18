@@ -338,7 +338,7 @@ class component {
 
         $ic2 = wordwrap($ic,4000,"\n",true);
         $parts = explode("\n",$ic2);
-        note('debug','Sending intercom '.$this->intercom_id.' | '.strlen($ic).' byte in '.count($parts).' parts');
+        //note('debug','Sending intercom '.$this->intercom_id.' | '.strlen($ic).' byte in '.count($parts).' parts');
 
 
         foreach( $parts as $key => $ic ) {

@@ -31,7 +31,7 @@ rules = {
         p.data = el;
         p.innerHTML = "<h1>Edit condition</h1>"+
             "<div >State variable <input id=\"value_state\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].state+"\"></div>"+
-            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states.logic.rules.uuid.conditions[key].type+"\"></div>"+
+            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].type+"\"></div>"+
             "<div >Value <input id=\"value_value\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].value+"\"></div>"+
             "<div ><input type=\"button\" onClick=\"rules.saveCondition('"+uuid+"','"+key+"');\" value=\"Update\"></div>";
 
@@ -69,7 +69,7 @@ rules = {
     },
 
     addCmd: function(cmd,uuid,cmduuid) {
-        if(cmduuid === undefined){
+        if(cmduuid == undefined){
             cmduuid = '';
         }
         var tmp,tmp1,tmp2,name,button;
@@ -82,7 +82,7 @@ rules = {
                 }
                 schedule.unschedule(uuid); 
                 var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=removeCmd&data=', onSuccess: function(data){
-                if(data.success !== undefined && data.success){
+                if(data.success != undefined && data.success){
                     $('settings_pane').fade('out');
                 }
             }}).send();
@@ -126,7 +126,7 @@ rules = {
         button = tmp.adopt(button);
         button.addEvent('click', function(event){
             var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=addCmd&data='+$('value_cmd').value.replace(/\n/g,','), onSuccess: function(data){
-                if(data.success !== undefined && data.success){
+                if(data.success != undefined && data.success){
                     $('settings_pane').fade('out');
                 }
             }}).send();
@@ -149,7 +149,7 @@ rules = {
         var field = null;
 
         // Create base
-        if ( $('rules').getElement('#rule_'+key) === undefined ) {/*{{{*/
+        if ( $('rules').getElement('#rule_'+key) == undefined ) {/*{{{*/
             el = new Element('div', {
                 class: 'rule',
                 id: 'rule_'+key
@@ -165,17 +165,17 @@ rules = {
 
 
             c = new Element('div', {
-                Class: 'conditions'
+                class: 'conditions'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                Class: 'enter'
+                class: 'enter'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                Class: 'exit'
+                class: 'exit'
             });
             $(el).adopt(c);
 
@@ -198,9 +198,9 @@ rules = {
         $$('#rule_'+key+' .exit div').addClass('INVALID');
 
         for( field in rule.conditions ) {/*{{{*/
-            if ($('rules').getElement('#condition_'+key+field) === undefined ) {
+            if ($('rules').getElement('#condition_'+key+field) == undefined ) {
                 el = new Element('div', {
-                    Class: 'condition',
+                    class: 'condition',
                     id: 'condition_'+key+field,
                     onClick: "rules.editCondition('"+key+"','"+field+"');"
                 });
@@ -220,9 +220,9 @@ rules = {
         }/*}}}*/
         if ( rule.enter ) {/*{{{*/
             for( field in rule.enter ) {
-                if ($('rules').getElement('#enter_'+key+field) === undefined ) {
+                if ($('rules').getElement('#enter_'+key+field) == undefined ) {
                     el = new Element('div', {
-                        Class: 'enter',
+                        class: 'enter',
                         id: 'enter_'+key+field
                     });
                     el.data = {
@@ -246,9 +246,9 @@ rules = {
         }/*}}}*/
         if ( rule.exit ) {/*{{{*/
             for( field in rule.exit ) {
-                if ($('rules').getElement('#exit_'+key+field) === undefined ) {
+                if ($('rules').getElement('#exit_'+key+field) == undefined ) {
                     el = new Element('div', {
-                        Class: 'exit',
+                        class: 'exit',
                         id: 'exit_'+key+field
                     });
                     el.data = {
