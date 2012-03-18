@@ -27,12 +27,12 @@ rules = {
     editCondition: function(uuid,key) {/*{{{*/
         p = $('settings_pane').getElement('.parameters');
         $('settings_pane').getElement('.remove').style.display = "block";
-        $('settings_pane').getElement('.remove').onclick = function() {rules.removeCondition(uuid,key)};
+        $('settings_pane').getElement('.remove').onclick = function() {rules.removeCondition(uuid,key);};
         p.data = el;
         p.innerHTML = "<h1>Edit condition</h1>"+
-            "<div >State variable <input id=\"value_state\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['state']+"\"></div>"+
-            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['type']+"\"></div>"+
-            "<div >Value <input id=\"value_value\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['value']+"\"></div>"+
+            "<div >State variable <input id=\"value_state\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].state+"\"></div>"+
+            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states.logic.rules.uuid.conditions[key].type+"\"></div>"+
+            "<div >Value <input id=\"value_value\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].value+"\"></div>"+
             "<div ><input type=\"button\" onClick=\"rules.saveCondition('"+uuid+"','"+key+"');\" value=\"Update\"></div>";
 
         $('settings_pane').fade('in');
@@ -69,10 +69,10 @@ rules = {
     },
 
     addCmd: function(cmd,uuid,cmduuid) {
-        if(cmduuid == undefined){
+        if(cmduuid === undefined){
             cmduuid = '';
         }
-        var tmp,tmp1,tmp2;
+        var tmp,tmp1,tmp2,name,button;
 
         if(cmduuid){
             $('settings_pane').getElement('.remove').style.display = "block";
@@ -82,7 +82,7 @@ rules = {
                 }
                 schedule.unschedule(uuid); 
                 var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=removeCmd&data=', onSuccess: function(data){
-                if(data.success != undefined && data.success){
+                if(data.success !== undefined && data.success){
                     $('settings_pane').fade('out');
                 }
             }}).send();
@@ -104,10 +104,10 @@ rules = {
                     tmp2 += field + ':'+rules.data[uuid].exit[cmduuid][field]+"\n";
                 }
             }
-            var button = new Element('input', {'type' : 'button', 'value' : 'Save'});
+            button = new Element('input', {'type' : 'button', 'value' : 'Save'});
 
 
-            var name = new Element('textarea', {'id':'value_cmd','value' : tmp2.substring(0,tmp2.length-1)});
+            name = new Element('textarea', {'id':'value_cmd','value' : tmp2.substring(0,tmp2.length-1)});
         }
         else{
             $('settings_pane').getElement('.remove').style.display = "none";
@@ -117,8 +117,8 @@ rules = {
             else{
                 el = new Element('h1', {html: 'Add exit command:'});
             }
-            var name = new Element('textarea', {'id':'value_cmd','value' : ''});
-            var button = new Element('input', {'type' : 'button', 'value' : 'Add'});
+            name = new Element('textarea', {'id':'value_cmd','value' : ''});
+            button = new Element('input', {'type' : 'button', 'value' : 'Add'});
         }
         tmp = new Element('div', {html: 'Name:'});
         name = tmp.adopt(name);
@@ -126,7 +126,7 @@ rules = {
         button = tmp.adopt(button);
         button.addEvent('click', function(event){
             var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=addCmd&data='+$('value_cmd').value.replace(/\n/g,','), onSuccess: function(data){
-                if(data.success != undefined && data.success){
+                if(data.success !== undefined && data.success){
                     $('settings_pane').fade('out');
                 }
             }}).send();
@@ -149,7 +149,7 @@ rules = {
         var field = null;
 
         // Create base
-        if ( $('rules').getElement('#rule_'+key) == undefined ) {/*{{{*/
+        if ( $('rules').getElement('#rule_'+key) === undefined ) {/*{{{*/
             el = new Element('div', {
                 class: 'rule',
                 id: 'rule_'+key
@@ -160,27 +160,27 @@ rules = {
                 '<input type="button" onClick="rules.addCmd(\'exit\',\''+key+'\')" value="Add exit">'+
                 '<input type="button" onClick="rules.rename(\''+key+'\')" value="Rename" style="margin-left:20px;">'+
                 '<input type="button" onClick="rules.remove(\''+key+'\')" value="Remove"></div>'+
-                '<h2>'+rule.name+'</h2>'
+                '<h2>'+rule.name+'</h2>';
             $('rules').adopt(el);
 
 
             c = new Element('div', {
-                class: 'conditions',
+                Class: 'conditions'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                class: 'enter',
+                Class: 'enter'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                class: 'exit',
+                Class: 'exit'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                style: 'clear:both;',
+                style: 'clear:both;'
             });
             $(el).adopt(c);
         }/*}}}*/
@@ -198,15 +198,15 @@ rules = {
         $$('#rule_'+key+' .exit div').addClass('INVALID');
 
         for( field in rule.conditions ) {/*{{{*/
-            if ($('rules').getElement('#condition_'+key+field) == undefined ) {
+            if ($('rules').getElement('#condition_'+key+field) === undefined ) {
                 el = new Element('div', {
-                    class: 'condition',
+                    Class: 'condition',
                     id: 'condition_'+key+field,
                     onClick: "rules.editCondition('"+key+"','"+field+"');"
                 });
                 el.data = {
                     field: field
-                }
+                };
                 $$('#rule_'+key+' .conditions')[0].adopt(el);
             }
 
@@ -220,14 +220,14 @@ rules = {
         }/*}}}*/
         if ( rule.enter ) {/*{{{*/
             for( field in rule.enter ) {
-                if ($('rules').getElement('#enter_'+key+field) == undefined ) {
+                if ($('rules').getElement('#enter_'+key+field) === undefined ) {
                     el = new Element('div', {
-                        class: 'enter',
+                        Class: 'enter',
                         id: 'enter_'+key+field
                     });
                     el.data = {
                         field: field
-                    }
+                    };
                     el.addEvent('click', function(event){
                         rules.addCmd('enter',key,this.data.field);
                         event.stopPropagation();
@@ -246,14 +246,14 @@ rules = {
         }/*}}}*/
         if ( rule.exit ) {/*{{{*/
             for( field in rule.exit ) {
-                if ($('rules').getElement('#exit_'+key+field) == undefined ) {
+                if ($('rules').getElement('#exit_'+key+field) === undefined ) {
                     el = new Element('div', {
-                        class: 'exit',
+                        Class: 'exit',
                         id: 'exit_'+key+field
                     });
                     el.data = {
                         field: field
-                    }
+                    };
                     el.addEvent('click', function(event){
                         rules.addCmd('exit',key,this.data.field);
                         event.stopPropagation();
@@ -273,4 +273,4 @@ rules = {
 
         $$('#rule_'+key+' .INVALID').dispose();
     }/*}}}*/
-}
+};
