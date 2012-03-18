@@ -14,6 +14,7 @@ class onkyo extends component {
         'power' => 'Control power. 0 or 1',
     );
     protected $que = array();
+    protected $test = null;
 
     function startup() {/*{{{*/
         $this->connect();
