@@ -252,7 +252,7 @@ class lg7000 extends component {
         $contents = '';
         if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,MSG_DONTWAIT) ) ){
             usleep(150000);
-            if($bytes === 0 || socket_last_error() === 107){
+            if($bytes === 0 || socket_last_error() === 107 || socket_last_error() === 32){
                 $this->intercom('not connected');
                 sleep(10); // Sleep a litte, and wait for connection
                 $this->connect();

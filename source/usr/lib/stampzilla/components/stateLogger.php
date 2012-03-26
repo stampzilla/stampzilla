@@ -1,4 +1,4 @@
-#!/usr/bin/php
+#!/usr/bin/php;
 <?php
 
 require_once "../lib/component.php";
@@ -35,6 +35,7 @@ class stateLogger extends component {
   protected $states = array();
   protected $vars = array();
   protected $values = array();
+  protected $newData = false;
 
   function startup() {
     $this->vars = explode(',',$this->setting('log'));
@@ -152,6 +153,7 @@ class stateLogger extends component {
         $this->values[$line] = $this->readStates($line);
 
         if ( !isset($prev[$line]) || $this->values[$line] <> $prev[$line] ) {
+          $this->newData = true;
           note(notice,'Logging value '.$line.'='.$this->values[$line] );
           if ( is_numeric($this->values[$line]) )
             $res = mysql_query('INSERT INTO stateLogger SET `field`="'.mysql_real_escape_string($line).'", `numeric`='.$this->values[$line].', `timestamp`=now()');
@@ -166,9 +168,16 @@ class stateLogger extends component {
     }
   }
 
+  function intercom_event() {
+    if ( $this->newData ) {
+      $this->newData = false;
+      $this->calculate();
+    }
+  }
+
   function _child() {
     sleep(10);
-    $this->calculate();
+    $this->intercom();
     mysql_ping();
   }
 
