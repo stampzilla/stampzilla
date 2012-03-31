@@ -99,6 +99,7 @@ class component {
 
                 // Make sure we dont leave any childs
                 pcntl_signal( SIGINT ,array($this,'kill_child'), true );
+                pcntl_signal(SIGCHLD, SIG_IGN);
                 //pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
                 register_shutdown_function(array($this,'kill_child') );
 
