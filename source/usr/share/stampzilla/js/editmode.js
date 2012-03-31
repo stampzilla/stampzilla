@@ -257,8 +257,8 @@ var editmode = {
                         $('settings_pane').fade('out');
                         editmode.copyData.uuid=data.ret;
                         editmode.elementClick(editmode.copyData);
-                        editmode.copyData=null;
                     }
+                    editmode.copyData=null;
                 }}).send();
             }
             else{
