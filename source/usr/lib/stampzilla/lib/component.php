@@ -99,7 +99,6 @@ class component {
 
                 // Make sure we dont leave any childs
                 pcntl_signal( SIGINT ,array($this,'kill_child'), true );
-                pcntl_signal(SIGCHLD, SIG_IGN);
                 //pcntl_signal( SIGTERM ,array($this,'kill_child'), true );
                 register_shutdown_function(array($this,'kill_child') );
 
@@ -117,6 +116,7 @@ class component {
 
             // Make shure we stop the parent if child dies
             register_shutdown_function(array($this,'kill_parent') );
+            pcntl_signal( SIGTERM ,array($this,'kill_parent'), true );
 
             // Save the intercom socket, and close the other
             $this->intercom_socket = $sockets[1]; // Writer
@@ -176,6 +176,7 @@ class component {
 // MAIN LOOPS
     function parent_loop() {/*{{{*/
         while(1) {
+            $dead_and_gone = pcntl_waitpid(-1,$status,WNOHANG);
             // Wait for a udp package
             if ( !$pkt = $this->udp->listen() )
                 continue;
@@ -253,7 +254,7 @@ class component {
 
     function kill_parent() {/*{{{*/
         $this->bye();
-        note(warning, "Died in child, killing parent");
+        note(warning, "Died in child, killing parent ".$this->parent_pid);
         posix_kill( $this->parent_pid, SIGINT );
         die();
     }/*}}}*/
@@ -265,7 +266,7 @@ class component {
         $this->bye();
 
         // Kill the child
-        note(warning, "Died in parent, killing child");
+        note(warning, "Died in parent, killing child ".$this->child_pid);
         posix_kill( $this->child_pid, 9 );
         die();
     }/*}}}*/
