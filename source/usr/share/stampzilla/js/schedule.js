@@ -60,6 +60,7 @@ schedule = {
     },
     showFormCmd: function(uuid){
         var tmp;
+        $('settings_pane').getElement('.copy').style.display = "none";
         var name = new Element('textarea', {'id':'value_cmd','value' : ''});
         tmp = new Element('div', {html: 'Name:'});
         name = tmp.adopt(name);
@@ -86,6 +87,7 @@ schedule = {
     },
     showFormSchedule: function(uuid){
         var tmp,name,interval,time,button;
+        $('settings_pane').getElement('.copy').style.display = "none";
         if(uuid != null){
             name = new Element('input', {'id':'value_name','type':'text','name' : 'name','value' : schedule.schedule[uuid].name});
             interval = new Element('input', {'id':'value_interval','type':'text','name' : 'interval','value' : schedule.schedule[uuid].interval});

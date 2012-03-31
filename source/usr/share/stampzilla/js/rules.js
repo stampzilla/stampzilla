@@ -11,6 +11,7 @@ rules = {
     addCondition: function(uuid) {/*{{{*/
         p = $('settings_pane').getElement('.parameters');
         $('settings_pane').getElement('.remove').style.display = "none";
+        $('settings_pane').getElement('.copy').style.display = "none";
         p.data = el;
         p.innerHTML = "<h1>New condition</h1>"+
             "<div >State variable <input id=\"value_state\" type=\"text\" value=\"\"></div>"+
@@ -27,6 +28,7 @@ rules = {
     editCondition: function(uuid,key) {/*{{{*/
         p = $('settings_pane').getElement('.parameters');
         $('settings_pane').getElement('.remove').style.display = "block";
+        $('settings_pane').getElement('.copy').style.display = "none";
         $('settings_pane').getElement('.remove').onclick = function() {rules.removeCondition(uuid,key);};
         p.data = el;
         p.innerHTML = "<h1>Edit condition</h1>"+
@@ -73,6 +75,8 @@ rules = {
             cmduuid = '';
         }
         var tmp,tmp1,tmp2,name,button;
+        
+        $('settings_pane').getElement('.copy').style.display = "none";
 
         if(cmduuid){
             $('settings_pane').getElement('.remove').style.display = "block";
