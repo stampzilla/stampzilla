@@ -11,6 +11,7 @@ rules = {
     addCondition: function(uuid) {/*{{{*/
         p = $('settings_pane').getElement('.parameters');
         $('settings_pane').getElement('.remove').style.display = "none";
+        $('settings_pane').getElement('.copy').style.display = "none";
         p.data = el;
         p.innerHTML = "<h1>New condition</h1>"+
             "<div >State variable <input id=\"value_state\" type=\"text\" value=\"\"></div>"+
@@ -27,12 +28,13 @@ rules = {
     editCondition: function(uuid,key) {/*{{{*/
         p = $('settings_pane').getElement('.parameters');
         $('settings_pane').getElement('.remove').style.display = "block";
-        $('settings_pane').getElement('.remove').onclick = function() {rules.removeCondition(uuid,key)};
+        $('settings_pane').getElement('.copy').style.display = "none";
+        $('settings_pane').getElement('.remove').onclick = function() {rules.removeCondition(uuid,key);};
         p.data = el;
-        p.innerHTML = "<h1>New condition</h1>"+
-            "<div >State variable <input id=\"value_state\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['state']+"\"></div>"+
-            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['type']+"\"></div>"+
-            "<div >Value <input id=\"value_value\" type=\"text\" value=\""+room.states['logic']['rules'][uuid]['conditions'][key]['value']+"\"></div>"+
+        p.innerHTML = "<h1>Edit condition</h1>"+
+            "<div >State variable <input id=\"value_state\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].state+"\"></div>"+
+            "<div >Type <input id=\"value_type\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].type+"\"></div>"+
+            "<div >Value <input id=\"value_value\" type=\"text\" value=\""+room.states.logic.rules[uuid].conditions[key].value+"\"></div>"+
             "<div ><input type=\"button\" onClick=\"rules.saveCondition('"+uuid+"','"+key+"');\" value=\"Update\"></div>";
 
         $('settings_pane').fade('in');
@@ -68,12 +70,87 @@ rules = {
         }
     },
 
-    addEnter: function(uuid) {
+    addCmd: function(cmd,uuid,cmduuid) {
+        if(cmduuid == undefined){
+            cmduuid = '';
+        }
+        var tmp,tmp1,tmp2,name,button;
+        
+        $('settings_pane').getElement('.copy').style.display = "none";
+
+        if(cmduuid){
+            $('settings_pane').getElement('.remove').style.display = "block";
+            $('settings_pane').getElement('.remove').onclick = function() {
+                if(!confirm('are u sure?')){
+                    return false; 
+                }
+                schedule.unschedule(uuid); 
+                var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=removeCmd&data=', onSuccess: function(data){
+                if(data.success != undefined && data.success){
+                    $('settings_pane').fade('out');
+                }
+            }}).send();
+                return false;
+            };
+            if(cmd == 'enter'){
+                el = new Element('h1', {html: 'Edit enter command:'});
+                tmp1 = rules.data[uuid].enter[cmduuid];
+                tmp2 = '';
+                for( field in tmp1 ) {
+                    tmp2 += field + ':'+rules.data[uuid].enter[cmduuid][field]+"\n";
+                }
+            }
+            else{
+                el = new Element('h1', {html: 'Edit exit command:'});
+                tmp1 = rules.data[uuid].exit[cmduuid];
+                tmp2 = '';
+                for( field in tmp1 ) {
+                    tmp2 += field + ':'+rules.data[uuid].exit[cmduuid][field]+"\n";
+                }
+            }
+            button = new Element('input', {'type' : 'button', 'value' : 'Save'});
+
+
+            name = new Element('textarea', {'id':'value_cmd','value' : tmp2.substring(0,tmp2.length-1)});
+        }
+        else{
+            $('settings_pane').getElement('.remove').style.display = "none";
+            if(cmd == 'enter'){
+                el = new Element('h1', {html: 'Add enter command:'});
+            }
+            else{
+                el = new Element('h1', {html: 'Add exit command:'});
+            }
+            name = new Element('textarea', {'id':'value_cmd','value' : ''});
+            button = new Element('input', {'type' : 'button', 'value' : 'Add'});
+        }
+        tmp = new Element('div', {html: 'Name:'});
+        name = tmp.adopt(name);
+        tmp = new Element('div', {html: ''});
+        button = tmp.adopt(button);
+        button.addEvent('click', function(event){
+            var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmdtype='+cmd+'&cmduuid='+cmduuid+'&uuid='+uuid+'&cmd=addCmd&data='+$('value_cmd').value.replace(/\n/g,','), onSuccess: function(data){
+                if(data.success != undefined && data.success){
+                    $('settings_pane').fade('out');
+                }
+            }}).send();
+            event.stopPropagation();
+            event.preventDefault();
+        });
+        p = $('settings_pane').getElement('.parameters');
+        p.innerHTML='';
+
+        el.inject(p);
+        tmp = new Element('div', {html: 'Example: <div style="float:none;">to:telldus<br>cmd:reset<br>id:1<br></div> '});
+        p.adopt(name,button,tmp);
+        el.inject(p,'top');
+        $('settings_pane').fade('in');
     },
     addExit: function(uuid) {
     },
     render: function(key) {/*{{{*/
         rule = rules.data[key];
+        var field = null;
 
         // Create base
         if ( $('rules').getElement('#rule_'+key) == undefined ) {/*{{{*/
@@ -83,31 +160,31 @@ rules = {
             });
             el.innerHTML = 
                 '<div class="toolbar"><input type="button" onClick="rules.addCondition(\''+key+'\')" value="Add condition">'+
-                '<input type="button" onClick="rules.addEnter(\''+key+'\')" value="Add enter">'+
-                '<input type="button" onClick="rules.addExit(\''+key+'\')" value="Add exit">'+
+                '<input type="button" onClick="rules.addCmd(\'enter\',\''+key+'\')" value="Add enter">'+
+                '<input type="button" onClick="rules.addCmd(\'exit\',\''+key+'\')" value="Add exit">'+
                 '<input type="button" onClick="rules.rename(\''+key+'\')" value="Rename" style="margin-left:20px;">'+
                 '<input type="button" onClick="rules.remove(\''+key+'\')" value="Remove"></div>'+
-                '<h2>'+rule.name+'</h2>'
+                '<h2>'+rule.name+'</h2>';
             $('rules').adopt(el);
 
 
             c = new Element('div', {
-                class: 'conditions',
+                class: 'conditions'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                class: 'enter',
+                class: 'enter'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                class: 'exit',
+                class: 'exit'
             });
             $(el).adopt(c);
 
             c = new Element('div', {
-                style: 'clear:both;',
+                style: 'clear:both;'
             });
             $(el).adopt(c);
         }/*}}}*/
@@ -133,7 +210,7 @@ rules = {
                 });
                 el.data = {
                     field: field
-                }
+                };
                 $$('#rule_'+key+' .conditions')[0].adopt(el);
             }
 
@@ -154,7 +231,12 @@ rules = {
                     });
                     el.data = {
                         field: field
-                    }
+                    };
+                    el.addEvent('click', function(event){
+                        rules.addCmd('enter',key,this.data.field);
+                        event.stopPropagation();
+                        event.preventDefault();
+                    });
                     $$('#rule_'+key+' .enter')[0].adopt(el);
                 }
 
@@ -175,7 +257,12 @@ rules = {
                     });
                     el.data = {
                         field: field
-                    }
+                    };
+                    el.addEvent('click', function(event){
+                        rules.addCmd('exit',key,this.data.field);
+                        event.stopPropagation();
+                        event.preventDefault();
+                    });
                     $$('#rule_'+key+' .exit')[0].adopt(el);
                 }
 
@@ -190,4 +277,4 @@ rules = {
 
         $$('#rule_'+key+' .INVALID').dispose();
     }/*}}}*/
-}
+};

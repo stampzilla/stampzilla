@@ -13,6 +13,7 @@ class component {
     private $died = false;
     private $hashed = false;
     public $state = array();
+    private $intercom_id = 0;
 
 // STARTUP
     function __construct() {/*{{{*/
@@ -31,7 +32,7 @@ class component {
         $this->peer = '';
 
     }/*}}}*/
-    function start( $id=NULL, $child=null ) {/*{{{*/
+    function start( $id=NULL, $child=null, $child_setup=null ) {/*{{{*/
         if($id)
             $this->peer = $id;
 
@@ -74,6 +75,8 @@ class component {
         if ( !$child ) {
             $this->child_pid = 1;
         } else {
+            $this->child_func = $child;
+
             // Create a intercom socket between parent and child process
             $sockets = array();
             if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
@@ -113,6 +116,7 @@ class component {
 
             // Make shure we stop the parent if child dies
             register_shutdown_function(array($this,'kill_parent') );
+            pcntl_signal( SIGTERM ,array($this,'kill_parent'), true );
 
             // Save the intercom socket, and close the other
             $this->intercom_socket = $sockets[1]; // Writer
@@ -121,15 +125,58 @@ class component {
             // Wait so parent have time to register SIGALRM handler
             sleep(1);
 
+            if ( $child_setup && is_callable(array($this,$child_setup)) )
+                $this->$child_setup();
+
             // Child
             note( debug, "Starting child loop" );
             $this->child_loop($child);
         }
     }/*}}}*/
 
+    function restart_child() {
+        $oldchild = $this->child_pid;
+
+        // Create a intercom socket between parent and child process
+        $sockets = array();
+        if (!socket_create_pair(AF_UNIX, SOCK_STREAM, 0, $sockets)) {
+            return trigger_error("Failed to create socket pair: ".socket_strerror(socket_last_error()));
+        }
+
+        // Fork a child process
+        if ( ($this->child_pid = pcntl_fork()) == -1 )
+            return trigger_error('Failed to fork');
+
+        note(debug,'Forked process with pid:'.$this->child_pid);
+
+        if ( $this->child_pid ) {
+            $this->intercom_socket = $sockets[0]; 
+
+            $this->setState('node.child',$this->child_pid);
+
+            posix_kill( $oldchild, 9 );
+        } else {
+            $this->parent_pid = posix_getppid();
+
+            // Make shure we stop the parent if child dies
+            register_shutdown_function(array($this,'kill_parent') );
+
+            $this->intercom_socket = $sockets[1]; // Writer
+            socket_close($sockets[0]);
+
+            if ( $child_setup && is_callable(array($this,$child_setup)) )
+                $this->$child_setup();
+
+            // Child
+            note( debug, "Starting child loop" );
+            $this->child_loop($this->child_func);
+        }
+    }
+
 // MAIN LOOPS
     function parent_loop() {/*{{{*/
         while(1) {
+            $dead_and_gone = pcntl_waitpid(-1,$status,WNOHANG);
             // Wait for a udp package
             if ( !$pkt = $this->udp->listen() )
                 continue;
@@ -182,13 +229,24 @@ class component {
     }/*}}}*/
 
 // COMMANDS
+    function emergency($msg) {
+        // TODO: Do some broadcasting here
+        note(emergency,$msg);
+
+        if ( isset($this->parent_pid) )
+            $this->kill_parent();
+
+        $this->bye();
+
+        die($msg);
+    }
     function getVariables() {/*{{{*/
         $data = get_object_vars($this);
         unset($data['udp']);
         unset($data['intercom_socket']);
         return $data;
     }/*}}}*/
-    function kill($pkt) {/*{{{*/
+    function kill($pkt=null) {/*{{{*/
         if ($pkt) 
             $this->ack($pkt);
         $this->kill_child();
@@ -196,7 +254,7 @@ class component {
 
     function kill_parent() {/*{{{*/
         $this->bye();
-        note(warning, "Died in child, killing parent");
+        note(warning, "Died in child, killing parent ".$this->parent_pid);
         posix_kill( $this->parent_pid, SIGINT );
         die();
     }/*}}}*/
@@ -208,7 +266,7 @@ class component {
         $this->bye();
 
         // Kill the child
-        note(warning, "Died in parent, killing child");
+        note(warning, "Died in parent, killing child ".$this->child_pid);
         posix_kill( $this->child_pid, 9 );
         die();
     }/*}}}*/
@@ -278,10 +336,21 @@ class component {
         // Send the alarm signal to parent
         posix_kill( $this->parent_pid, SIGALRM );
 
-        $ic = wordwrap($ic,8192,"\n",true);
-        $parts = explode("\n",$ic);
+        $this->intercom_id++;
 
-        foreach( $parts as $ic ) {
+        $ic2 = wordwrap($ic,4000,"\n",true);
+        $parts = explode("\n",$ic2);
+        //note('debug','Sending intercom '.$this->intercom_id.' | '.strlen($ic).' byte in '.count($parts).' parts');
+
+
+        foreach( $parts as $key => $ic ) {
+            $ic = base64_encode($ic);
+            $ic = json_encode( array(
+                'id' => $this->intercom_id,
+                'p' => count($parts),
+                'd' => $ic
+            ))."\n";
+
             if ( !socket_write( $this->intercom_socket,$ic,strlen($ic) ) ) {
                 $code = socket_last_error();
                 if ( $code == 32 )
@@ -307,19 +376,39 @@ class component {
         }
 
         $buff = explode("\n",$buff);
+        $intercoms = array();
 
         foreach ( $buff as $buffen ){
             if ( !trim($buffen) )
                 continue;
 
-            if ( ($args = json_decode($buffen)) === NULL )
+            if ( ($args = json_decode($buffen,true)) === NULL )
                 return trigger_error("Syntax error in intercom JSON (".trim($buffen).")");
 
-            // Call the intercom_event
-            if ( is_callable(array($this,'intercom_event')) ) {
-                call_user_func_array( array($this,'intercom_event'),$args );
-            } else
-                trigger_error("Got intercom event but no intercom_event function exists!");
+            if ( !isset($intercoms[$args['id']]) )
+                $intercoms[$args['id']] = array(
+                    'cnt' => $args['p'],
+                    'parts' => array()
+                );
+
+            $intercoms[$args['id']]['parts'][] = base64_decode($args['d']);
+
+            if ( $intercoms[$args['id']]['cnt'] == count($intercoms[$args['id']]['parts']) ) {
+                $data = implode($intercoms[$args['id']]['parts']);
+
+                note(debug,'Recived intercom '.$args['id']);
+
+                if ( ($data2 = json_decode($data)) === NULL )
+                    return trigger_error("Syntax error in intercom JSON (".trim($data).")");
+
+                unset($intercoms[$args['id']]);
+
+                // Call the intercom_event
+                if ( is_callable(array($this,'intercom_event')) ) {
+                    call_user_func_array( array($this,'intercom_event'),$data2 );
+                } else
+                    trigger_error("Got intercom event but no intercom_event function exists!");
+            }
         }
     }/*}}}*/
 
@@ -416,26 +505,34 @@ class component {
 		}
     }/*}}}*/
 	function set_setting($key,$value) {
-        $file = '/etc/stampzilla/'.$this->peer.'.yml';
 
-        // Check if file exists
-        if ( !is_file($file) )
-			if ( !touch($file) )
-	            return "Failed to create config file ($file)!";
+    if ( is_callable(array($this,'setting_validate')) ) {
+        if ( $ret = $this->setting_validate($key,$value) )
+          return $ret;
+    }
+
+    $file = '/etc/stampzilla/'.$this->peer.'.yml';
+
+    // Check if file exists
+    if ( !is_file($file) )
+        if ( !touch($file) )
+	      return "Failed to create config file ($file)!";
 
         // Try to read the settings file (yml)
         $data = spyc_load_file($file);
 
         $data[$key] = $value;
-    
+
         $string = Spyc::YAMLDump($data);
 
         if ( !file_put_contents($file,$string) )
-            return "Failed to save config file ($file)!";
-    
+          return "Failed to save config file ($file)!";
+
         if ( is_callable(array($this,'setting_saved')) ) {
-            return $this->setting_saved($key,$value);
+          return $this->setting_saved($key,$value);
         }
+
+        $this->settings[$key] = $value;
 
 		return true;
 	}
