@@ -1,5 +1,6 @@
 window.sape = {
     url:null,
+    failCounter:0,
     init: function(url) {
         this.requests = [];
         this.requestFailObserver = [];
@@ -71,12 +72,15 @@ window.sape = {
 
         window.sape.clearRequest(window.sape.requests.shift());
 
-        if (this.failCounter < 6) this.failCounter++;
+        if (window.sape.failCounter < 6) window.sape.failCounter++;
+        parent.window.sape.fail(window.sape.failCounter);
 
         //this.cancelRequest();
 
-        var delay = (this.failCounter*Math.random(300,1000));
+        var delay = (window.sape.failCounter*Math.random(300,1000));
 
-        setTimeout(function() {window.sape.request('?check');},delay );
+        setTimeout(function() {
+            window.sape.request('?check');
+        },delay );
     },
 };
