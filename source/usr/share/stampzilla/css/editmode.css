@@ -73,6 +73,20 @@
 	padding-top:10px;
 	background:#f00;
 }
+#settings_pane .copy {
+	position:absolute;
+	top:0px;
+	right:200px;
+	width:150px;
+	height:40px;
+	border-left:1px solid #fff;
+	border-bottom:1px solid #fff;
+	font-size:24px;
+	text-align:center;
+	cursor:pointer;
+	padding-top:10px;
+	background:#f00;
+}
 
 #settings_pane .exit {
 	position:absolute;

@@ -47,18 +47,31 @@ class squeezebox extends component {
         $p = $this->setting('password');
 
         if ( $host && $port ) {
-            note(notice,"Connecting to $host:$port");
-            $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-            socket_connect($this->socket,$host,$port);
 
-            if ( $u && $p ) {
-                note(notice,"Sending auth parameters ($u)");
-                $this->send("login $u $p\n");
+            if ( isset($this->socket) ) {
+                $doRestart = true;
+                socket_close($this->socket);
             }
 
-            $this->send("players 0 999 \n");
-            //$this->send("listen 1\n");
-            $this->send("subscribe alarm,pause,play,stop,client,mixer\n");
+            note(notice,"Connecting to $host:$port");
+            $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+            socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+            if( !socket_connect($this->socket,$host,$port))
+                return;
+
+            if ( isset($doRestart) && isset($this->parent_pid) ) {
+                note(notice,'Starting new onkyo daemon');
+                $this->intercom('connected');
+            } else {
+                if ( $u && $p ) {
+                    note(notice,"Sending auth parameters ($u)");
+                    $this->send("login $u $p\n");
+                }
+                $this->state['power'] = false;
+                $this->send("players 0 999 \n");
+                //$this->send("listen 1\n");
+                $this->send("subscribe alarm,pause,play,stop,client,mixer\n");
+            }
         }
     }
 
@@ -101,6 +114,19 @@ class squeezebox extends component {
     }
 
     function intercom_event($cmd) {
+        if ( $cmd == 'not connected' ) {
+            $this->setState('power',false);
+            $this->setState('source',false);
+            $this->setState('volume',false);
+            return;
+        }
+
+        if ( $cmd == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
         $cmd = trim($cmd);
         list($main,$data) = explode(' ',$cmd,2);
         $main = urldecode($main);
@@ -279,8 +305,9 @@ class squeezebox extends component {
 
     function _child() {
         if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
-            sleep(10000);
-            die("DIE");
+            $this->intercom('not connected');
+            sleep(10); // Sleep a litte, and wait for connection
+            $this->connect();
         }
 
         $this->buff .= $buff;

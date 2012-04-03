@@ -242,6 +242,7 @@ $layout = array(
             </div>
 			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
 				<div class="parameters"></div>
+				<div class="copy" onClick="editmode.copy();">Copy</div>
 				<div class="remove" onClick="editmode.remove();">Remove</div>
 				<div class="exit" onClick="$(this.parentNode).fade();">X</div>
 			</div>

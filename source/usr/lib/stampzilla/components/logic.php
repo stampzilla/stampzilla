@@ -343,9 +343,10 @@ class logic extends component {
         return $this->ack($pkt,array('value'=>$pkt['value']));
     }/*}}}*/
     function create($pkt) {/*{{{*/
+        $uni = uniqid();
         switch($pkt['element']) {
             case 'buttons':
-                $this->rooms[$pkt['room']]['buttons'][uniqid()] = array(
+                $this->rooms[$pkt['room']]['buttons'][$uni] = array(
                     'title' => 'New button',
                     'position' => ($pkt['x']-50).','.($pkt['y']-50).',100,100',
                     'component' => 'UNCONFIGURED',
@@ -367,7 +368,7 @@ class logic extends component {
             'data' => $this->rooms[$pkt['room']]
         ));
 
-        return true;
+        return $uni;
     }/*}}}*/
     function remove($pkt) {/*{{{*/
         if ( !isset($this->rooms[$pkt['room']][$pkt['element']][$pkt['uuid']]) )

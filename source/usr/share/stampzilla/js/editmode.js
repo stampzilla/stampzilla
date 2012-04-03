@@ -179,6 +179,14 @@ var editmode = {
 
         $('settings_pane').fade('in');
     },
+    copyData: null,
+    copy: function(){
+        
+        p = $('settings_pane').getElement('.parameters');
+        editmode.copyData = p.data;
+        editmode.addButton($('settings_pane').getElement('.copy'));
+        $('settings_pane').fade();
+    },
     remove: function() {
         if ( confirm("You are about to remove this button, is this ok?") ) {
             p = $('settings_pane').getElement('.parameters');
@@ -243,7 +251,19 @@ var editmode = {
         pages = $$('.page.active');
         if ( pages[0] != undefined && pages[0].hasClass('room') ) {
             uuid = pages[0].id.substring(5,pages[0].id.length);
-            sendJSON('to=logic&cmd=create&room='+uuid+'&element=buttons&x='+x+'&y='+y);
+            if(editmode.copyData !== null){
+                var jsonRequest = new Request.JSON({url: 'send.php?to=logic&cmd=create&room='+uuid+'&element=buttons&x='+x+'&y='+y, onSuccess: function(data){
+                    if(data.success != undefined && data.success){
+                        $('settings_pane').fade('out');
+                        editmode.copyData.uuid=data.ret;
+                        editmode.elementClick(editmode.copyData);
+                    }
+                    editmode.copyData=null;
+                }}).send();
+            }
+            else{
+                sendJSON('to=logic&cmd=create&room='+uuid+'&element=buttons&x='+x+'&y='+y);
+            }
         }
 
         return false;
