@@ -6,6 +6,7 @@ require_once '../lib/component.php';
 class lg7000 extends component {
     protected $componentclasses = array('video.switch');
     protected $settings = array();
+    protected $next = 0;
     protected $commands = array(
         'power' => 'Controls the power',
     );
@@ -33,8 +34,27 @@ class lg7000 extends component {
     );
 
     function startup() {
+        $this->connect();
+
+    }
+
+    function connect(){
+
+        if ( isset($this->socket) ) {
+            $doRestart = true;
+            socket_close($this->socket);
+        }
+
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'localhost',3002);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        if( !socket_connect($this->socket,'localhost',3002))
+            return;
+
+        if ( isset($doRestart) && isset($this->parent_pid) ) {
+            note(notice,'Starting new lg7000 daemon');
+            $this->intercom('connected');
+            $this->que = array();
+        }
 
     }
 
@@ -116,6 +136,21 @@ class lg7000 extends component {
     }
 
     function intercom_event($in) {
+        if ( $in == 'not connected' ) {
+            $this->setState('power',false);
+            $this->setState('source',false);
+            $this->setState('volume',false);
+            $this->setState('mute',false);
+            $this->setState('channel',false);
+            return;
+        }
+
+        if ( $in == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
         if ( !$in ) {
             return $this->send('ka 0 ff'); // Check power
         }
@@ -135,11 +170,16 @@ class lg7000 extends component {
 
                     if ( !$this->state['power'] && $power ) {
                         $this->setState('power',$power);
-                        sleep(7);
+                        note(debug,"Feeling sleepy...zZzz");
+                        $done = time() + 8;
+                        while($done>time()) {
+                            sleep(1);
+                        }
+                        note(debug,"done sleeeping...zZzz");
                         $this->send('ke 0 ff'); // Check mute
                         $this->send('kf 0 ff'); // Check volume
                         $this->send('xb 0 ff'); // Check source
-                        $this->send('ma 0 ff ff ff'); // Check channel
+                        //$this->send('ma 0 ff ff ff'); // Check channel
                     } elseif ( $power ) {
                         $this->send('ke 0 ff'); // Check mute
                         $this->send('kf 0 ff'); // Check volume
@@ -211,7 +251,12 @@ class lg7000 extends component {
     function _child() {
         $contents = '';
         if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,MSG_DONTWAIT) ) ){
-            usleep(100000);
+            usleep(150000);
+            if($bytes === 0 || socket_last_error() === 107 || socket_last_error() === 32){
+                $this->intercom('not connected');
+                sleep(10); // Sleep a litte, and wait for connection
+                $this->connect();
+            }
         }
         $this->buff .= $buff;
 

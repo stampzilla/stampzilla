@@ -29,6 +29,9 @@ $layout = array(
 		'heat' => array(
 			0 => 'Heat'
 		),
+		'temp' => array(
+			0 => 'Temp'
+		),
 	),
 	'alarm' => array(
 		0 => 'Alarm',
@@ -77,6 +80,7 @@ $layout = array(
 
         <script type="text/javascript" src="js/all.php"></script>
         <script type="text/javascript" src="js/iScroll.js"></script>
+        <script type="text/javascript" src="js/graph/dygraph-combined.js"></script>
 
         <link href="css/base.css" rel="stylesheet" />
         <link href="css/editmode.css" rel="stylesheet" />
@@ -238,6 +242,7 @@ $layout = array(
             </div>
 			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
 				<div class="parameters"></div>
+				<div class="copy" onClick="editmode.copy();">Copy</div>
 				<div class="remove" onClick="editmode.remove();">Remove</div>
 				<div class="exit" onClick="$(this.parentNode).fade();">X</div>
 			</div>

@@ -1,6 +1,10 @@
 #!/usr/bin/php
 <?php
 
+//stty -F /dev/ttyUSB1 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+//stty -F /dev/ttyUSB0 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+//stty -F /dev/ttyUSB2 -brkint -icrnl -imaxbel -opost -isig -icanon -echo raw
+
 require_once "../lib/component.php";
 
 class onkyo extends component {
@@ -10,33 +14,42 @@ class onkyo extends component {
         'power' => 'Control power. 0 or 1',
     );
     protected $que = array();
+    protected $test = null;
 
     function startup() {/*{{{*/
-        $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
-        socket_connect($this->socket,'localhost',3001);
-
-
-        $this->send('!1PWRQSTN');
-        $this->send('!1MVLQSTN');
-        $this->send('!1SLIQSTN');
+        $this->connect();
 
     }/*}}}*/
+
+    function connect(){
+
+        if ( isset($this->socket) ) {
+            $doRestart = true;
+            socket_close($this->socket);
+        }
+
+        $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
+        if( !socket_connect($this->socket,'localhost',3001))
+            return;
+
+        if ( isset($doRestart) && isset($this->parent_pid) ) {
+            note(notice,'Starting new onkyo daemon');
+            $this->intercom('connected');
+        } else {
+            $this->state['power'] = false;
+            $this->send('!1PWRQSTN');
+            $this->send('!1MVLQSTN');
+            $this->send('!1SLIQSTN');
+        }
+
+    }
 
 //FUNCTIONS
     function power($pkt){/*{{{*/
         if(!isset($pkt['power']))
             $pkt['power'] = (!$this->state['power'])+0;
-
         $this->send('!1PWR0'.$pkt['power'],$pkt);
-
-        /*if ( $pkt['power'] ) {
-            note(debug,"Feeling sleepy...zZzz");
-            $done = time() + 5;
-            while($done>time()) {
-                sleep(1);
-            }
-            note(debug,"don sleeeping...zZzz");
-        }*/
     }/*}}}*/
     function source($pkt){/*{{{*/
         $s = array (
@@ -77,14 +90,21 @@ class onkyo extends component {
     }/*}}}*/
 
     function intercom_event($cmd){/*{{{*/
+        if ( $cmd == 'not connected' ) {
+            $this->setState('power',false);
+            $this->setState('source',false);
+            $this->setState('volume',false);
+            return;
+        }
+
+        if ( $cmd == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
 
         note(notice,'Read: '.$cmd);
-
-        $pkt = array_shift($this->que);
-
-        if ( $pkt['pkt'] )
-            $this->ack($pkt['pkt']);
-
         $s = array (
             '00' => 'vcrdvr',
             '01' => 'cblsat',
@@ -100,9 +120,16 @@ class onkyo extends component {
             26 => 'tuner',
         );
 
+        $pkt = reset($this->que);
+        if ( ($pkt['pkt'] && trim($cmd) == trim($pkt['cmd'])) || strstr($pkt['cmd'],'QSTN') ){
+            $pkt = array_shift($this->que);
+            $this->ack($pkt['pkt']);
+        }
 
         $val = substr($cmd,5);
         $cmd = substr($cmd,0,5);
+
+
         switch ($cmd){
             case '!1SLI':
                 $this->setState('source',$s[$val]);
@@ -132,7 +159,9 @@ class onkyo extends component {
     function _child() {/*{{{*/
         $contents = '';
         if( false == ($bytes = socket_recv($this->socket,$buff, 2048,0) ) ){
-            die();
+            $this->intercom('not connected');
+            sleep(10); // Sleep a litte, and wait for connection
+            $this->connect();
         }
         $this->buff .= $buff;
 
@@ -154,24 +183,33 @@ class onkyo extends component {
             'cmd' => $text."\r",
             'pkt' => $ack,
             'sent' => false,
-            'timestamp' => 0
+            'timestamp' => 0,
+            'retry' => 0
         );
 
         $this->runQue();
+
     }/*}}}*/
     function runQue() {/*{{{*/
         note(debug,"Kolla kö");
         $next = reset($this->que);
 
+
         if ( !$next )
             return;
 
         if ( $next['timestamp'] < time() && $next['sent']) {
-            note(warning,"Unanswerd message (".$next['cmd']."), throwing it away");
-            if( $next['pkt'] )
-                $this->nak($next['pkt']);
+            note(warning,"Unanswerd message (".$next['cmd']."), Trying again:".$next['retry']);
+            if($next['retry'] < 2){
+                note(warning,"Unanswerd message (".$next['cmd']."), throwing it away");
+                if( $next['pkt'] )
+                    $this->nak($next['pkt']);
 
-            array_shift($this->que);
+                array_shift($this->que);
+            }
+            else
+                $next['sent'] = false;
+            $this->que[key($this->que)]['retry'] = $this->que[key($this->que)]['retry']+1;
             $next = reset($this->que);
         }
 

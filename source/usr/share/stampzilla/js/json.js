@@ -53,6 +53,10 @@ incoming = function( pkt ) {
                                             menu.showPage(location.hash.substring(1,location.hash.length));
                                         }
                                     }
+                                    break;
+                                case 'stateLogger':
+                                    stateLogger.setState(pkt.ret.data);
+                                    break;
                             }
                             break;
                         case 'media':
@@ -130,6 +134,10 @@ incoming = function( pkt ) {
 					if ( pkt.from == 'xbmc' ) {
                         video.setState(pkt.from,pkt.data);
 					}
+
+                    if ( pkt.from == 'stateLogger' ) {
+                        stateLogger.setState(pkt.data);
+                    }
                     break;
                 case 'event':
                     switch(pkt.event) {

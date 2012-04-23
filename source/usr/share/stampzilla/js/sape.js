@@ -1,10 +1,20 @@
 sape = new Class({
 	transport:null,
+    spinner:null,
 	scripts:[
 		'js/sape.transport.js'
 	],
 	connect:function(url) {
 		window.sape = this;
+
+        window.sape.spinner = new Spinner(
+            'container',
+            {
+                message:"Connecting...",
+            }
+        );
+        window.sape.spinner.show(true);
+
 
 		iframe = new Element('iframe', {
 			id: 'sape',
@@ -38,10 +48,16 @@ sape = new Class({
 
 	},
     ready:function(){
+        window.sape.spinner.hide();
 		communicationReady();
     },
 	recive:function(data) {
+        window.sape.spinner.hide();
 		incoming(data);
-	}
+	},
+    fail:function(cnt){
+        window.sape.spinner.show();
+        window.sape.spinner.msg.innerHTML = 'Reconnecting ('+cnt+')...';
+    },
 })
 

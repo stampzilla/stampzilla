@@ -7,6 +7,7 @@ class xbmc3 extends component {
     private $active_player ='';
     private $lastcmd = array();
 	private $players = array();
+    private $mac = null;
 
     private $commands = array(/*{{{*/
         'play'=>'play'
@@ -24,23 +25,52 @@ class xbmc3 extends component {
             'type'=>'text',
             'name' => 'Web port',
             'required' => true
+        ),
+        'macaddress'=>array(
+            'type'=>'text',
+            'name' => 'MAC Address',
+            'required' => true
         )
     );/*}}}*/
 
     function startup() {/*{{{*/
         $this->connect($this->setting('hostname'),9090);
+        $this->mac = $this->setting('macaddress');
     }/*}}}*/
 
-    function connect($host,$port) {/*{{{*/
+    function connect($host = null,$port = null) {/*{{{*/
+
+        if ( $host )
+            $this->host = $host;
+        else
+            $host = $this->host;
+
+        if ( $port )
+            $this->port = $port;
+        else
+            $port = $this->port;
+
+        if ( isset($this->socket) ) {
+            $doRestart = true;
+            socket_close($this->socket);
+        }
+
         $this->socket = socket_create(AF_INET,SOCK_STREAM,SOL_TCP);
+        socket_set_option($this->socket, SOL_SOCKET, SO_REUSEADDR, 1);
 
         if ( !$host || !$port )
             return;
 
-        socket_connect($this->socket,$host,$port);
+        if ( !socket_connect($this->socket,$host,$port) ) 
+            return;
 
-        $this->json('JSONRPC.Version');
-        $this->json('Player.GetActivePlayers');
+        if ( isset($doRestart) && isset($this->parent_pid) ) {
+            note(notice,'Starting new xbmc3 daemon');
+            $this->intercom('connected');
+        } else {
+            $this->json('JSONRPC.Version');
+            $this->json('Player.GetActivePlayers');
+        }
 		//$this->json('VideoLibrary.GetTVShows');
     }/*}}}*/
 
@@ -50,8 +80,25 @@ class xbmc3 extends component {
 
     function intercom_event($event){
 
+        if ( $event == 'not connected' ) {
+            unset($this->state['video']);
+            unset($this->state['picture']);
+            unset($this->state['music']);
+            $this->setState('power',false);
+            return;
+        }
+
+        if ( $event == 'connected' ) {
+            note(notice,'Reconnecting');
+            $this->connect();
+            note(notice,'Restarting child');
+            return $this->restart_child();
+        }
+
+
         // Decode the incomming message/*{{{*/
-        note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
+        //note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
+        note(debug,"From XBMC: \n".$event);
         if ( !$event = json_decode($event) ) {
             note(error,"Syntaxerror from XBMC");
             return;
@@ -64,6 +111,8 @@ class xbmc3 extends component {
             return trigger_error($event->error->message." (".$event->error->data->stack->message.")",E_USER_WARNING);
         };/*}}}*/
 
+        $this->setState(array('booting'=>false,'power'=>true));
+
         // Handle sent commands
         if( isset($event->id) && isset($this->lastcmd[$event->id]) ) {
             $cmd = $this->lastcmd[$event->id]['data'];
@@ -75,7 +124,7 @@ class xbmc3 extends component {
                 case 'JSONRPC.Version':
                     $this->api_version = $event->result->version;
 
-                    if ( $this->api_version != 3 ){
+                    if ( $this->api_version != 3 && $this->api_version != 4 ){
                         trigger_error("Unsupported JSON.RPC API version ({$this->api_version})",E_USER_ERROR);
                         die();
                     }
@@ -138,6 +187,8 @@ class xbmc3 extends component {
 							$this->players[$id] = array();
 
 						$this->players[$id]['playing'] = true;
+                        if( isset($this->players[$id]['media']) && $event->params->data->item->id != $this->players[$id]['media']->id)
+    					    $this->json('Player.GetItem',array($id));
 
 						$this->setPlayerStates();
 
@@ -161,6 +212,9 @@ class xbmc3 extends component {
 					case 'GUI.OnScreensaverDeactivated':
 						$this->setState('screensaver',false);
 						break;
+					case 'System.OnRestart':
+						$this->setState('booting',true);
+						break;
 				}
             }
         }
@@ -180,6 +234,43 @@ class xbmc3 extends component {
 			}
 		}
 	}
+    //commands
+    function shutdown($pkt){
+        $this->json('System.Shutdown',null,$pkt);
+    }
+    function boot($pkt){
+        if($this->mac && isset($this->state['power']) && $this->state['power'] === false){
+            exec('etherwake -i vlan10 '.$this->mac);
+            $this->setState('booting',true);
+        }
+        return true;
+    }
+
+
+    //below commands doesnt work yet. Copied from xbmc.php
+    function play($pkt){
+        if( $this->active_player && $this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    function pause($pkt){
+        if( $this->active_player && !$this->state->paused){
+            $this->json('VideoPlayer.PlayPause',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+    }
+    function stop($pkt){
+
+        if($this->active_player){
+            $this->json($this->active_player.'Player.Stop',null,$pkt);
+        }
+        else
+            $this->nak($pkt['from']);
+
+    }
 
 
     function getId(){/*{{{*/
@@ -214,7 +305,9 @@ class xbmc3 extends component {
 
     function readSocket(){/*{{{*/
         if( false == ($bytes = @socket_recv($this->socket,$buff, 2048,0) ) ){
-            sleep(1); // Sleep a litte, and wait for connection
+            $this->intercom('not connected');
+            sleep(10); // Sleep a litte, and wait for connection
+            $this->connect();
         }
         $this->buff .= $buff;
 

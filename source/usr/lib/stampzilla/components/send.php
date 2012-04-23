@@ -41,7 +41,10 @@ class sender extends component{
                 note(debug,'Success!');
 
                 if(isset($pkt['answer'])){
-                    $data['answer'] = $pkt['answer'];
+                    $this->data['answer'] = $pkt['answer'];
+                }
+                if(isset($pkt['ret'])){
+                    $this->data['ret'] = $pkt['ret'];
                 }
 
 				echo json_format(json_encode($pkt['ret']))."\n";

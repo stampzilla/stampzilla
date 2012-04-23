@@ -99,7 +99,7 @@ class beckhoff extends component {
 
 // COMMANDS/*{{{*/
 	function toggle($pkt) {
-		$this->write('.Interface.'.$pkt['tag'],!$this->readState($pkt['tag']),$pkt);
+		$this->write('.Interface.'.$pkt['tag'],!$this->readState('.Interface.'.$pkt['tag']),$pkt);
 	}
 	function set($pkt) {
 		if ( !isset($pkt['value']) )
@@ -833,7 +833,7 @@ class beckhoff extends component {
 
                 if ( strlen($package) < ($len) ) {
                     $this->show($package,"SHORT");
-                    echo "To short $start - ".strlen($package)."<$len\n";
+                    //echo "To short $start - ".strlen($package)."<$len\n";
                     return;
                 }
 
