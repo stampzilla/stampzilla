@@ -1,4 +1,4 @@
-#!/usr/bin/php;
+#!/usr/bin/php
 <?php
 
 require_once "../lib/component.php";
@@ -73,6 +73,7 @@ class stateLogger extends component {
           `numeric` float NOT NULL,
           `string` varchar(100) NOT NULL,
           `timestamp` DATETIME NOT NULL,
+          `rm` int(1) NOT NULL,
           PRIMARY KEY (`id`)
         )") )
           $this->emergency('Failed to create table stateLogger in mysql database');
@@ -83,7 +84,16 @@ class stateLogger extends component {
         $this->values[$row['field']] = 0;
       }
 
+      $graphs = array();
       foreach($this->values as $key => $line) {
+        $res2 = mysql_query("SELECT field FROM fields WHERE name='".mysql_real_escape_string($key)."'");
+        if ( !$row2 = mysql_fetch_assoc($res2) ) {
+            mysql_query('INSERT INTO fields SET name="'.mysql_real_escape_string($key).'"');
+            $row2['field'] = mysql_insert_id();
+        }
+
+        $graphs[$key] = $row2['field'];
+
         $res = mysql_query("SELECT `numeric`,`string` FROM stateLogger WHERE field='".mysql_real_escape_string($key)."' ORDER BY id DESC LIMIT 1");
         while($row = mysql_fetch_assoc($res)) {
           if ( $row['string'] <> '' ) {
@@ -94,6 +104,7 @@ class stateLogger extends component {
         }
       }
 
+      $this->setState('graphs',$graphs);
 
       if ( !$res = mysql_query('SHOW TABLES LIKE "fields"') )
         $this->emergency('Failed to check if table fields exists in database');
@@ -116,17 +127,16 @@ class stateLogger extends component {
               `id` int(11) NOT NULL AUTO_INCREMENT,
               `field` int(11) NOT NULL,
               `timestamp` DATETIME NOT NULL,
-              `sec` int(11) NOT NULL,
-              `min` int(11) NOT NULL,
-              `hour` int(11) NOT NULL,
-              `day` int(11) NOT NULL,
+              `sec` float NOT NULL,
+              `min` float NOT NULL,
+              `hour` float NOT NULL,
+              `day` float NOT NULL,
               PRIMARY KEY (`id`)
             )") )
           $this->emergency('Failed to create table data in mysql database');
       }
 
     }
-
 
 
     $this->calculate();
@@ -182,31 +192,32 @@ class stateLogger extends component {
   }
 
   function calculate() {
+    $res = mysql_query("SELECT field FROM stateLogger WHERE not rm GROUP BY field");
+    while($row = mysql_fetch_assoc($res)) {
+        $res2 = mysql_query("SELECT field FROM fields WHERE name='".$row['field']."'");
+        if ( !$row2 = mysql_fetch_assoc($res2) ) {
+            mysql_query('INSERT INTO fields SET name="'.$row['field'].'"');
+            $row2['field'] = mysql_insert_id();
+        }
+
+        $this->calculateField($row['field'],$row2['field']);
+    }
+  }
+
+  function calculateField($field,$id) {
     $sec = array();
     $min = array();
     $hour = array();
     $day = array();
 
-    /*$start = strtotime("-7days");
-    for($i=0;$i<2000;$i++) {
-      mysql_query("INSERT INTO stateLogger SET ".
-        "`timestamp`=FROM_UNIXTIME(".rand($start,time())."), ".
-        "`field`='telldus.temp', ".
-        "`numeric`=".rand(0,30)." "
-      );
-    }*/
+    if ( !$res = mysql_query("SELECT *,UNIX_TIMESTAMP(timestamp) utimestamp FROM stateLogger WHERE NOT rm AND `field`='".$field."' ORDER BY timestamp ASC") )
+        return;
 
-    //mysql_query("TRUNCATE TABLE data");
-
-    if ( !$res = mysql_query("SELECT *,UNIX_TIMESTAMP(timestamp) utimestamp FROM stateLogger WHERE NOT rm ORDER BY timestamp ASC") )
-        die("Ingen data");
-
-    note(notice,"Recalculating averages (".mysql_num_rows($res).") rows");
+    note(notice,"Recalculating field $field:$id averages (".mysql_num_rows($res).") rows");
 
     while( $row = mysql_fetch_assoc($res) ) {
       if ( !isset($first) ) {
         $first = $row['utimestamp'];
-        print_r($row);
       }
 
       $this->clean($sec,$row['utimestamp']-1);
@@ -219,12 +230,13 @@ class stateLogger extends component {
       $hour[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
       $day[$row['utimestamp'].'.'.$row['id']] = $row['numeric'];
 
-      $exist = mysql_query("SELECT id FROM data WHERE timestamp='".$row['timestamp']."'");
-      
+      $exist = mysql_query("SELECT id FROM data WHERE timestamp='".$row['timestamp']."' AND field='$id'");
+
       if ( $row['utimestamp'] > $first + 86400 || !mysql_num_rows($exist) ) {
-        mysql_query("DELETE FROM data WHERE timestamp='".$row['timestamp']."'");
+        mysql_query("DELETE FROM data WHERE timestamp='".$row['timestamp']."' AND field='$id'");
         mysql_query("INSERT INTO data SET ".
             "`timestamp`='".$row['timestamp']."', ".
+            "`field`='".$id."', ".
             "sec=".(array_sum($sec)/count($sec)).", ".
             "min=".(array_sum($min)/count($min)).", ".
             "hour=".(array_sum($hour)/count($hour)).", ".

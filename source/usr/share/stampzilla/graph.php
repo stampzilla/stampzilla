@@ -1,5 +1,8 @@
 <?php
 
+if ( !isset($_GET['field']) || !is_numeric($_GET['field']) )
+    die('Invalid request; ?field is missing');
+
 require_once("../../lib/stampzilla/lib/spyc.php");
 
 $file = '/etc/stampzilla/stateLogger.yml';
@@ -16,8 +19,10 @@ if ( !mysql_connect($settings['server'],$settings['username'],$settings['passwor
 
 mysql_select_db($settings['database']);
 
+$id = $_GET['field']+0;
+
 echo "Date,Sec,Min,Hour,Day\n";
-if ( $res = mysql_query("SELECT * FROM data ORDER BY timestamp") )
+if ( $res = mysql_query("SELECT * FROM data WHERE field=$id ORDER BY timestamp") )
   while($row = mysql_fetch_assoc($res)) {
     echo $row['timestamp'].",0;".$row['sec'].";0,0;".$row['min'].";0,0;".$row['hour'].";0,0;".$row['day'].";0\n";
     //Month,Nominal,Real

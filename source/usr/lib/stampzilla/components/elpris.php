@@ -18,16 +18,16 @@ class elpris extends component {
 
     foreach($data as $key => $line) {
       if ( $line['x'] > 600 && $line['x'] < 700 && $line['y'] > 600 && $line['y'] < 700 ) {
-        $state['SE4'] = $line['label'];
+        $state['SE4'] = str_replace(',','.',$line['label'])+0;
       }
       if ( $line['x'] > 700 && $line['x'] < 720 && $line['y'] > 550 && $line['y'] < 650 ) {
-        $state['SE3'] = $line['label'];
+        $state['SE3'] = str_replace(',','.',$line['label'])+0;
       }
       if ( $line['x'] > 700 && $line['x'] < 750 && $line['y'] > 350 && $line['y'] < 400 ) {
-        $state['SE2'] = $line['label'];
+        $state['SE2'] = str_replace(',','.',$line['label'])+0;
       }
       if ( $line['x'] > 750 && $line['x'] < 800 && $line['y'] > 220 && $line['y'] < 250 ) {
-        $state['SE1'] = $line['label'];
+        $state['SE1'] = str_replace(',','.',$line['label'])+0;
       }
     }
 

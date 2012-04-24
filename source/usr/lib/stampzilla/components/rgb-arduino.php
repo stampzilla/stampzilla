@@ -14,7 +14,7 @@ class rgb extends component {
 
 
     function startup(){
-        exec("stty -F /dev/arduino 9600 raw");
+        exec("stty -F /dev/arduino 9600 raw -echo");
         if ( !$this->t = fopen('/dev/arduino','r+b') )
             die(" - Failed to open\n");
 
@@ -31,9 +31,11 @@ class rgb extends component {
 
     function up($pkt) {
         $target1 = 28500;
+        $target1 = 100;
         fwrite($this->t,chr(1).pack('n',$target1).chr(0)); 
 
         $target2 = 28500;
+        $target2 = 100;
         fwrite($this->t,chr(2).pack('n',$target2).chr(0)); 
 
         return true;
@@ -69,6 +71,7 @@ class rgb extends component {
             $this->setState('1',$this->_charhex(chr($r).chr($g).chr($b)) );
             note(debug,"Sending color $r,$g,$b");
             fwrite($this->t,chr(5).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+            fwrite($this->t,chr(6).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
             return true;
         }
 
@@ -111,10 +114,32 @@ class rgb extends component {
 
         return $this->set(implode($color));
     }
+
+    function intercom_event($data) {
+        $data = explode('|',$data);
+        $this->setState('lux',$data);
+    }
+
+    function _child() {
+        if ( !isset($this->buffert) )
+            $this->buffert = '';
+
+        $this->buffert .= fgets($this->t, 128);
+
+        if ( $end = strpos($this->buffert,"\n") ) {
+            $cmd = substr($this->buffert,0,$end-1);
+            $this->buffert = substr($this->buffert,$end+1);
+
+            $this->intercom($cmd);
+        }
+        usleep(10000);
+    }
+
+
 }
 
 $t = new rgb();
-$t->start('rgb-arduino');
+$t->start('rgb-arduino','_child');
 
 
 ?>

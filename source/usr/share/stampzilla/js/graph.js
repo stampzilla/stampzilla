@@ -15,11 +15,12 @@ graph = {
       window.resizeTo(width, height);
     },
 
-    draw: function(){
-    
-      $('dow_chart').setStyle('height',400);
-      $('dow_chart').setStyle('width',700);
- 
+    draw: function(obj,field){
+
+      obj = $(obj);
+
+      obj.setStyle('height',400);
+      obj.setStyle('width',700);
 
       var stock_annotations = [
         {
@@ -50,9 +51,9 @@ graph = {
 
     // From http://www.econstats.com/eqty/eq_d_mi_3.csv
       stockchart = new Dygraph(
-        document.getElementById('dow_chart'),
+        obj,
         //"dow.txt",
-        "graph.php",
+        "graph.php?field="+field,
         {
           showRoller: true,
           customBars: true,
