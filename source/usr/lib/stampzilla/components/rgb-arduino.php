@@ -117,7 +117,7 @@ class rgb extends component {
 
     function intercom_event($data) {
         $data = explode('|',$data);
-        print_r($data);
+        $this->setState('lux',$data);
     }
 
     function _child() {
@@ -127,7 +127,7 @@ class rgb extends component {
         $this->buffert .= fgets($this->t, 128);
 
         if ( $end = strpos($this->buffert,"\n") ) {
-            $cmd = substr($this->buffert,1,$end-1);
+            $cmd = substr($this->buffert,0,$end-1);
             $this->buffert = substr($this->buffert,$end+1);
 
             $this->intercom($cmd);

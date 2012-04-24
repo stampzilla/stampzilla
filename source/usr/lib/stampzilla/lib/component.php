@@ -337,6 +337,8 @@ class component {
         posix_kill( $this->parent_pid, SIGALRM );
 
         $this->intercom_id++;
+        if ( $this->intercom_id > 65000 )
+            $this->intercom_id = 0;
 
         $ic2 = wordwrap($ic,4000,"\n",true);
         $parts = explode("\n",$ic2);
@@ -366,6 +368,10 @@ class component {
         // Add the signal handler again
         if ( !pcntl_signal( SIGALRM,array($this,'recive_intercom') ) )
             trigger_error("Failed to install signal handler");
+
+        if (!defined('MSG_DONTWAIT')) {
+            define('MSG_DONTWAIT', 0x40);
+        }
 
         // Read the message, and try at least 1000 times
         $buff = '';
