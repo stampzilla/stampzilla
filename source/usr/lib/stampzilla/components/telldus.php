@@ -15,6 +15,7 @@ class telldus extends component {
     );
 
     private $dev = array();
+    private $cmdhistory = array();
 
     function startup() {
         $this->state();
@@ -34,6 +35,9 @@ class telldus extends component {
 
         foreach($ret as $key => $line) {
             $line = explode("\t",$line);
+
+            if(!isset($line[2]) || isset($line[3]))
+                continue;
 
             $status = '';
             if ( $line[2] == 'ON' )
@@ -78,6 +82,7 @@ class telldus extends component {
         $this->dev[$pkg['id']]['status'] = 0;
         $this->send_state();
 
+        print_r($res);
         if ( strpos($res[0],'Success') )
             return $res;
         return false;
@@ -108,9 +113,9 @@ class telldus extends component {
                 $temp[$t[0]] = $t[1];
             unset($temp[$key]);
         }
-        if(isset($temp['type'])){
-            switch($temp['type']) {
-                case 'temperature':
+        if(isset($temp['model'])){
+            switch($temp['model']) {
+                case 'temperaturehumidity':
                     file_put_contents('/tmp/temperature', $temp['temp']);
                     $this->setState('temp',$temp['temp']);
                     break;
@@ -132,19 +137,32 @@ class telldus extends component {
     }
     function _child() {
         $this->socket = stream_socket_client('unix:///tmp/TelldusEvents');
-        $templast = '';
-        $start = microtime(true);
         while(1){
             if( false == ($temporg = stream_socket_recvfrom($this->socket,1024))){
                 $this->intercom(array('error'=>'Died in child','status'=>'died'));
                 echo "died in child";
                 die();
             }
-            $now = microtime(true);
-            if($templast == $temporg && (($now-$start) < 1))
+
+            print_r($this->cmdhistory);
+
+            print_r($temporg);
+            if(strlen($temporg) > 125)
                 continue;
-            $templast = $temporg;
-            $start = microtime(true);
+            foreach($this->cmdhistory AS $key=>$line){
+                $now = microtime(true);
+                if( ($now-$line['time'] ) < 1 ){
+                    if($line['cmd'] == $temporg ){
+                        note(notice,'CONTINUE!!!!');
+                        continue 2;
+                    }
+                }
+                else
+                    array_shift($this->cmdhistory);
+            }
+
+            $this->cmdhistory[] = array('cmd'=>$temporg,'time'=>microtime(true));
+
             $this->intercom(trim($temporg));
         }
 
