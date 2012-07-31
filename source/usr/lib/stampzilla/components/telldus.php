@@ -153,7 +153,7 @@ class telldus extends component {
                 $now = microtime(true);
                 if( ($now-$line['time'] ) < 1 ){
                     if($line['cmd'] == $temporg ){
-                        note(notice,'CONTINUE!!!!');
+                        note(notice,'SKIPPING: '.$temporg);
                         continue 2;
                     }
                 }
