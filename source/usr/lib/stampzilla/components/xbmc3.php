@@ -32,12 +32,10 @@ class xbmc3 extends component {
             'required' => true
         )
     );/*}}}*/
-
     function startup() {/*{{{*/
         $this->connect($this->setting('hostname'),9090);
         $this->mac = $this->setting('macaddress');
     }/*}}}*/
-
     function connect($host = null,$port = null) {/*{{{*/
 
         if ( $host )
@@ -73,12 +71,11 @@ class xbmc3 extends component {
         }
 		//$this->json('VideoLibrary.GetTVShows');
     }/*}}}*/
-
-	function notify($pkt) {
+	function notify($pkt) {/*{{{*/
 		$this->json('JSONRPC.NotifyAll',array('stampzilla',$pkt['message']),$pkt);
-	}
+	}/*}}}*/
 
-    function intercom_event($event){
+    function intercom_event($event){/*{{{*/
 
         if ( $event == 'not connected' ) {
             unset($this->state['video']);
@@ -93,9 +90,7 @@ class xbmc3 extends component {
             $this->connect();
             note(notice,'Restarting child');
             return $this->restart_child();
-        }
-
-
+        }/*}}}*/
         // Decode the incomming message/*{{{*/
         //note(debug,"From XBMC: \n".substr($event,0,100)."\n <> \n".substr($event,-100));
         note(debug,"From XBMC: \n".$event);
@@ -124,8 +119,8 @@ class xbmc3 extends component {
                 case 'JSONRPC.Version':
                     $this->api_version = $event->result->version;
 
-                    if ( $this->api_version != 3 && $this->api_version != 4 ){
-                        trigger_error("Unsupported JSON.RPC API version ({$this->api_version})",E_USER_ERROR);
+                    if ( $this->api_version != 3 && $this->api_version != 4 && $this->api_version->major != 6 ){
+                        trigger_error("Unsupported JSON.RPC API version (".print_r($this->api_version).")",E_USER_ERROR);
                         die();
                     }
                     break;
@@ -140,6 +135,7 @@ class xbmc3 extends component {
 						if ( !isset($found[$key]) ) {
 							unset($this->players[$key]['media']);
 							$this->players[$key]['playing'] = false;
+							$this->players[$key]['state'] = 'stopped';
 						}
 					}
                         
@@ -147,7 +143,7 @@ class xbmc3 extends component {
 
                     break;
 				case 'VideoLibrary.GetTVShows':
-				print_r($event->result);
+				    print_r($event->result);
 					break;
 				case 'Player.GetItem':
 					$this->players[$params[0]]['media'] = $event->result->item;
@@ -187,6 +183,7 @@ class xbmc3 extends component {
 							$this->players[$id] = array();
 
 						$this->players[$id]['playing'] = true;
+						$this->players[$id]['state'] = 'playing';
                         if( isset($this->players[$id]['media']) && $event->params->data->item->id != $this->players[$id]['media']->id)
     					    $this->json('Player.GetItem',array($id));
 
@@ -200,6 +197,7 @@ class xbmc3 extends component {
 							$this->players[$id] = array();
 
 						$this->players[$id]['playing'] = false;
+						$this->players[$id]['state'] = 'paused';
 
 						$this->setPlayerStates();
 						break;
@@ -246,6 +244,68 @@ class xbmc3 extends component {
         return true;
     }
 
+    function input_left($pkt){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ExecuteAction',array('action'=>'stepback'));
+        else
+            $this->json('Input.Left');
+
+        return true;
+    }
+    function input_right(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ExecuteAction',array('action'=>'stepforward'));
+        else
+            $this->json('Input.Right');
+
+        return true;
+    }
+    function input_up(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ExecuteAction',array('action'=>'bigstepforward'));
+        else
+            $this->json('Input.Up');
+        
+        return true;
+    }
+    function input_down(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ExecuteAction',array('action'=>'bigstepback'));
+        else
+            $this->json('Input.Down');
+        
+        return true;
+    }
+    function input_select(){
+        if($this->players[1]['state'] == 'playing')
+            $this->json('Input.ExecuteAction',array('action'=>'pause'));
+        elseif($this->players[1]['state'] == 'paused')
+            $this->json('Input.ExecuteAction',array('action'=>'play'));
+        else
+            $this->json('Input.Select');
+        return true;
+    }
+    function input_back(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ExecuteAction',array('action'=>'stop'));
+        else
+            $this->json('Input.Back');
+        return true;
+    }
+    function input_menu(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.ShowOSD');
+        else
+            $this->json('Input.Info');
+        return true;
+    }
+    function input_contextmenu(){
+        if($this->players[1]['playing'] == true)
+            $this->json('Input.Info');
+        else
+            $this->json('Input.ContextMenu');
+        return true;
+    }
 
     //below commands doesnt work yet. Copied from xbmc.php
     function play($pkt){
