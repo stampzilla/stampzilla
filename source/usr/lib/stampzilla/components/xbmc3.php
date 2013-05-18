@@ -145,6 +145,24 @@ class xbmc3 extends component {
 				case 'VideoLibrary.GetTVShows':
 				    print_r($event->result);
 					break;
+				case 'VideoLibrary.GetMovies':
+                    if($var['cmd'] == 'playMovieByTitle'){
+                        echo $var['title'];
+                        $tmpdata = $event->result->movies;
+                        unset($event->result);
+                        foreach($tmpdata as $movie){
+                            $var['title'] = str_replace(' ','.*',$var['title']);
+                            if(preg_match('/'.$var['title'].'/i',$movie->label,$out)){
+                                $event->result = array('movieid'=>$movie->movieid,'label'=>$movie->label);
+    					        $this->json('Player.Open',array('item'=>array('movieid'=>$movie->movieid)));
+                                break;
+                            }
+                        }
+				        print_r($event->result);
+                        //unset($event->result);
+
+                    }
+					break;
 				case 'Player.GetItem':
 					$this->players[$params[0]]['media'] = $event->result->item;
 					$this->setPlayerStates();
@@ -330,6 +348,10 @@ class xbmc3 extends component {
         else
             $this->nak($pkt['from']);
 
+    }
+
+    function playMovieByTitle($pkt){
+		$this->json('VideoLibrary.GetMovies',array('sort'=>array('method'=>'label','order'=>'ascending')),$pkt);
     }
 
 
