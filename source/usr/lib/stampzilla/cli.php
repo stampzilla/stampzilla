@@ -168,7 +168,7 @@ function command($cmd,$pwd = '',$args=array()) {
             } else {
                 $c = explode("\n",file_get_contents('/etc/stampzilla/autostart.list'));
                 foreach( $c as $key => $line ) {
-                    if ( !$line )
+                    if ( !$line || substr($line,0,1)=='#' )
                         continue;
                     if(is_file($line)){
                         $run = $line;

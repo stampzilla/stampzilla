@@ -70,8 +70,16 @@ class rgb extends component {
         if ( isset($r) ) {
             $this->setState('1',$this->_charhex(chr($r).chr($g).chr($b)) );
             note(debug,"Sending color $r,$g,$b");
-            fwrite($this->t,chr(5).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
-            fwrite($this->t,chr(6).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+            if(isset($pkt['channel'])){
+                if($pkt['channel']==1)
+                    fwrite($this->t,chr(5).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+                if($pkt['channel']==2)
+                    fwrite($this->t,chr(6).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+            }
+            else{
+                fwrite($this->t,chr(5).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+                fwrite($this->t,chr(6).chr($r).chr($g).chr($b)); // 5 = rgb 1, 6 = rgb 2
+            }
             return true;
         }
 

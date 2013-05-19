@@ -144,6 +144,12 @@ class logic extends component {
             $this->setState('rules',$this->rules);
         }
     }
+
+    function runRule($pkt){
+        $rule = $this->rules[$pkt['uuid']];
+            foreach($rule['enter'] as $line2)
+                $this->broadcast($line2);
+    }
 /*}}}*/
     function state($pkt) {/*{{{*/
         return array(

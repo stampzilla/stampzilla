@@ -70,7 +70,7 @@ class squeezebox extends component {
                 $this->state['power'] = false;
                 $this->send("players 0 999 \n");
                 //$this->send("listen 1\n");
-                $this->send("subscribe alarm,pause,play,stop,client,mixer\n");
+                $this->send("subscribe power,alarm,pause,play,stop,client,mixer\n");
             }
         }
     }
