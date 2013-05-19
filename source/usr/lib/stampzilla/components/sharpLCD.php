@@ -33,7 +33,7 @@ class sharpLCD extends component {
 
     function startup() {
         $this->s = new phpSerial();
-        $this->s->deviceSet( "/dev/ttyUSB0" );
+        $this->s->deviceSet( "/dev/arduino" );
 	$this->s->conf( "9600 -parenb cs8 -cstopb clocal -crtscts -ixon -ixoff -echo raw" );
         $this->s->deviceOpen();
 	
@@ -190,6 +190,8 @@ class sharpLCD extends component {
             $this->next = time() + 2;
             $this->intercom('CHECK');
         }
+
+		usleep(10000);
     }
 
     function send( $text,$ack = null ) {/*{{{*/
