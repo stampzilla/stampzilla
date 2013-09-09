@@ -187,8 +187,11 @@ class onkyo extends component {
             'retry' => 0
         );
 
-        $this->runQue();
-
+        while(true){
+            if(!$this->runQue())
+                break;
+        }
+        note(warning,count($this->que));
     }/*}}}*/
     function runQue() {/*{{{*/
         note(debug,"Kolla kö");
@@ -196,7 +199,7 @@ class onkyo extends component {
 
 
         if ( !$next )
-            return;
+            return false;
 
         if ( $next['timestamp'] < time() && $next['sent']) {
             note(warning,"Unanswerd message (".$next['cmd']."), Trying again:".$next['retry']);
@@ -206,15 +209,16 @@ class onkyo extends component {
                     $this->nak($next['pkt']);
 
                 array_shift($this->que);
+                $next = reset($this->que);
             }
-            else
+            else{
                 $next['sent'] = false;
-            $this->que[key($this->que)]['retry'] = $this->que[key($this->que)]['retry']+1;
-            $next = reset($this->que);
+                $this->que[key($this->que)]['retry'] = $this->que[key($this->que)]['retry']+1;
+            }
         }
 
         if ( !$next )
-            return;
+            return false;
 
         if( ($next && !$next['sent']) ) {
             $text = $next['cmd'];
@@ -226,6 +230,8 @@ class onkyo extends component {
             $this->que[key($this->que)]['sent'] = true;
             $this->que[key($this->que)]['timestamp'] = time() + 5;
         }
+
+        return;
     }/*}}}*/
 
 }
