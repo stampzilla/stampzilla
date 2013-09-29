@@ -26,30 +26,60 @@ schedule = {
         $$('.invalid').dispose();
     },
     draw: function(el,data){
-        var html = '';
+        var tmp,button;
         for(var cmduuid in data.commands) {
-            html += '<div class="cmds">';
-            html += '<input type="button" value="Remove" onclick="if(!confirm(\'Are u sure?\')){return false;}schedule.unscheduleCommand(\''+cmduuid+'\');return false;" />';
+            tmp = new Element('div', {class: 'cmds'});
+            button = new Element('input', {'type' : 'button', 'value' : 'Remove'});
+            button.addEvent('click', function(event){
+                if(!confirm('Are u sure?')){
+                    return false;
+                }
+                schedule.unscheduleCommand(cmduuid);
+                return false;
+            });
+            tmp.adopt(button);
             for(var fields in data.commands[cmduuid]) {
-                html += '<div class="cmd">'+fields+' : '+data.commands[cmduuid][fields]+'</div>';
+                tmp.adopt( new Element('div', {class: 'cmd',html: ''+fields+' : '+data.commands[cmduuid][fields]+''}));
             }
-            html += '</div>';
+
+            el.adopt(tmp);
         }
-        html += '<div style="float:right;"><input type="button" value="Add command" onclick="schedule.showFormCmd(\''+data.uuid+'\');return false;" /></div>';
-        html += '<div class="name"><span onclick="schedule.showFormSchedule(\''+data.uuid+'\');return false;">'+data.name+'</span></div>';
-        html += '<div>Time: '+data.time+'</div>';
-        html += '<div>Interval: '+data.interval+'</div>';
+        
+        var add = new Element('div', {styles: {float:'right'}});
+        var input_add = new Element('input', {'type' : 'button', 'value' : 'Add command'});
+        input_add.addEvent('click', function(event){
+            schedule.showFormCmd(data.uuid);
+            event.stopPropagation();
+        });
+        add.adopt(input_add);
+        el.adopt(add);
+
+        var name = new Element('div', {class: 'name'});
+        var name_span = new Element('span' ,{html: data.name  });
+        name_span.addEvent('click', function(event){
+            schedule.showFormSchedule(data.uuid);
+            event.stopPropagation();
+        });
+        name.adopt(name_span);
+        el.adopt(name);
+
+
+        var time = new Element('div', {html: 'Time: '+data.time});
+        el.adopt(time);
+
+        var interval = new Element('div', {html: 'Interval: '+data.interval});
+        el.adopt(interval);
+
+
         if(data.timestamp != undefined){
-        var date = new Date(data.timestamp*1000);
-            html += '<div>Next run time: '+("0" + date.getHours()).slice(-2)+':'+("0" + date.getMinutes()).slice(-2)+':'+("0" + date.getSeconds()).slice(-2)+'</div>';
-        }
-        else{
-            html += '<div>Next run time: none</div>';
+            var date = new Date(data.timestamp*1000);
+            var interval = new Element('div', {html: 'Next run time: '+("0" + date.getHours()).slice(-2)+':'+("0" + date.getMinutes()).slice(-2)+':'+("0" + date.getSeconds()).slice(-2)});
+            el.adopt(interval);
         }
 
-        html += '<div style="clear:both;"></div>';
+        var clear = new Element('div', {styles: {clear:'both'}});
+        el.adopt(clear);
 
-        el.innerHTML = html;
     },
 
     unscheduleCommand: function(uuid){

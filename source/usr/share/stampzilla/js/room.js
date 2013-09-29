@@ -195,8 +195,12 @@ room = {
                 if ( el.data.state != undefined ) {
                     el.getElement('.state').innerHTML = 'UNKNOWN';
                 }
-                el.onclick = function() {room.button(this)};
-            }
+                el.addEvent('click', function(event){
+                    room.button(this);
+                    event.stopPropagation();
+                    
+                });
+        }
         }
 
         buttons = $$('#page_'+uuid+' .button');
@@ -385,7 +389,9 @@ room = {
         }
     },
 	liveUpdate: function() {
-        clearTimeout(pressTimer);
+        if(pressTimer != undefined){
+            clearTimeout(pressTimer);
+        }
 		if ( this.scroller != undefined && !isNaN(this.y) ) {
 			value = (-this.y/this.wrapper.parentNode.factor/(this.wrapper.parentNode.data.max/this.wrapper.parentNode.data.step)) * this.wrapper.parentNode.data.max + this.wrapper.parentNode.data.min;
 

@@ -242,19 +242,32 @@ $layout = array(
             </div>
 			<div id="settings_pane" style="visibility: hidden; opacity: 0;">
 				<div class="parameters"></div>
-				<div class="copy" onClick="editmode.copy();">Copy</div>
-				<div class="remove" onClick="editmode.remove();">Remove</div>
-				<div class="exit" onClick="$(this.parentNode).fade();">X</div>
+				<div class="copy" onclick="editmode.copy();">Copy</div>
+				<div class="remove" onclick="editmode.remove();">Remove</div>
+				<div class="exit" onclick="$(this.parentNode).fade();">X</div>
 			</div>
             <div class="menu">
 				<?php
 					end($layout);
 					$last = key($layout);
-					foreach($layout as $key => $line)
+					foreach($layout as $key => $line){
+
 						if ( $key == $last ) 
-							echo '<a class="last" onClick="menu.main(this);" id="'.$key.'">'.$line[0].'</a>';
+							echo '<a class="last"  id="'.$key.'">'.$line[0].'</a>';
 						else
-							echo '<a onClick="menu.main(this);" id="'.$key.'">'.$line[0].'</a>';
+							echo '<a id="'.$key.'">'.$line[0].'</a>';
+
+                        echo "
+                        <script language=\"javascript\">
+                        $('".$key."').addEvent('click', function(event){
+                            menu.main(this);
+                            event.stopPropagation();
+                            
+                        });
+
+                        </script>
+                        ";
+                    }
 				?>
             </div>
 			<div class="editmode editmenu">

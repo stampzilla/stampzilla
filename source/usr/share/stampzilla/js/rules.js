@@ -80,7 +80,7 @@ rules = {
 
         if(cmduuid){
             $('settings_pane').getElement('.remove').style.display = "block";
-            $('settings_pane').getElement('.remove').onclick = function() {
+            $('settings_pane').getElement('.remove').addEvent('click', function(event) {
                 if(!confirm('are u sure?')){
                     return false; 
                 }
@@ -91,7 +91,8 @@ rules = {
                 }
             }}).send();
                 return false;
-            };
+            });
+
             if(cmd == 'enter'){
                 el = new Element('h1', {html: 'Edit enter command:'});
                 tmp1 = rules.data[uuid].enter[cmduuid];
