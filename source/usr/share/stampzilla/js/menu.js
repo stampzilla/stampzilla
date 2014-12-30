@@ -27,10 +27,10 @@ var menu = {
 					continue;
 				}
 				show = true;
-				if( window.Touch ) {
+                if('ontouchstart' in document.documentElement) {
 					$('submenu').innerHTML += '<a ontouchstart="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
 				} else {
-					$('submenu').innerHTML += '<a onClick="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
+					$('submenu').innerHTML += '<a onclick="menu.sub(this)" id="'+node+'">'+menu.layout[obj.id][node][0]+'</a>';
 				}
 			}
 		}
